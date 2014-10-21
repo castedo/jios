@@ -7,6 +7,24 @@ using namespace jios;
 
 // streamed
 
+BOOST_AUTO_TEST_CASE( simple_stream_test )
+{
+  ostringstream ss;
+  json_out(ss, '\n') << 1 << 2 << "three";
+  BOOST_CHECK_EQUAL( ss.str(), "1\n2\n\"three\"\n" );
+}
+
+BOOST_AUTO_TEST_CASE( simple_array_test )
+{
+  ostringstream ss;
+  ojarray oja = json_out(ss).put().array();
+  for (int i = 0; i < 10; ++i) {
+//    oja << i;
+  }
+  oja.terminate();     
+  BOOST_CHECK_EQUAL( ss.str(), "[]" );
+}
+
 BOOST_AUTO_TEST_CASE( empty_object_test )
 {
   ostringstream ss;
