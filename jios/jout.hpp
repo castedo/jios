@@ -25,6 +25,8 @@ public:
 
   ojstreamoid(ojstreamoid && rhs) : pimpl_(std::move(rhs.pimpl_)) {}
 
+  ojstreamoid & operator = (ojstreamoid && rhs);
+
   void terminate();
 
 protected:
@@ -47,49 +49,29 @@ public:
 // ojarray
 
 class ojarray
-  : boost::noncopyable
+  : public ojstream
 {
 public:
-  ojarray(ojarray && rhs) : pimpl_(std::move(rhs.pimpl_)) {}
-
-  ojarray & operator = (ojarray && rhs);
+  ojarray(std::shared_ptr<ojsink> const& p) : ojstream(p) {}
 
   ojnode & operator * () { return *pimpl_; }
 
   ojnode * operator -> () { return pimpl_.get(); }
-
-  void terminate();
-
-public:
-  ojarray(std::shared_ptr<ojsink> const& p) : pimpl_(p) {}
-
-private:
-  std::shared_ptr<ojsink> pimpl_;
 };
 
 // ojobject
 
 class ojobject
-  : boost::noncopyable
+  : public ojstreamoid
 {
 public:
-  ojobject(ojobject && rhs) : pimpl_(std::move(rhs.pimpl_)) {}
-
-  ojobject & operator = (ojobject && rhs);
+  ojobject(std::shared_ptr<ojsink> const& p) : ojstreamoid(p) {}
 
   ojvalue & put(std::string const& k);
 
   ojnode & operator [] (std::string const& k);
 
   template<typename T> ojnode & operator [] (T const& k);
-
-  void terminate();
-
-public:
-  ojobject(std::shared_ptr<ojsink> const& p) : pimpl_(p) {}
-
-private:
-  std::shared_ptr<ojsink> pimpl_;
 };
 
 // ojnode
@@ -188,20 +170,30 @@ void ojnode::print(boost::optional<T> const& ov)
 ////////////////////////////////////////
 /// inline method implementations
 
-inline void ojstreamoid::terminate()
+inline
+ojstreamoid & ojstreamoid::operator = (ojstreamoid && rhs)
 {
+  pimpl_ = std::move(rhs.pimpl_);
+  return *this;
+}
+
+inline
+void ojstreamoid::terminate()
+{
+  BOOST_ASSERT(pimpl_);
   if (pimpl_) {
     pimpl_->do_terminate();
   }
 }
 
-inline ojvalue & ojstream::put()
+inline
+ojvalue & ojstream::put()
 {
   return *pimpl_;
 }
 
-template<typename T>
-inline ojstream & ojstream::operator << (T const& src)
+template<typename T> inline
+ojstream & ojstream::operator << (T const& src)
 {
   if (pimpl_) {
     pimpl_->print(src);

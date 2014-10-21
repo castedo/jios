@@ -21,11 +21,11 @@ Features
   instead data can be read directly into C++ objects
 
 * source back-end do not have to parse all JSON at once, but rather parsing can
-  be `streamed` before all JSON is available
+  be **streamed** before all JSON is available
 
 
-Example
--------
+Examples
+--------
 
 ```cpp
 json_out(cout, '\n') << 1 << 2 << "three";
@@ -36,6 +36,19 @@ outputs
 1
 2
 "three"
+```
+
+```cpp
+  ojarray oja = json_out(cout).put().array();
+  for (int i = 0; i < 3; ++i) {
+    oja << i;
+  }
+  oja.terminate();     
+  cout << endl;
+```
+outputs
+```
+[0, 1, 2]
 ```
 
 

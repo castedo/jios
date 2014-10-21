@@ -18,11 +18,11 @@ BOOST_AUTO_TEST_CASE( simple_array_test )
 {
   ostringstream ss;
   ojarray oja = json_out(ss).put().array();
-  for (int i = 0; i < 10; ++i) {
-//    oja << i;
+  for (int i = 0; i < 3; ++i) {
+    oja << i;
   }
   oja.terminate();     
-  BOOST_CHECK_EQUAL( ss.str(), "[]" );
+  BOOST_CHECK_EQUAL( ss.str(), "[0, 1, 2]" );
 }
 
 BOOST_AUTO_TEST_CASE( empty_object_test )

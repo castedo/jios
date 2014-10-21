@@ -310,38 +310,6 @@ void ostream_ojnode::out_suffix()
   }
 }
 
-// ojarray
-
-ojarray & ojarray::operator = (ojarray && rhs)
-{
-  pimpl_ = std::move(rhs.pimpl_);
-  return *this;
-}
-
-void ojarray::terminate()
-{
-  BOOST_ASSERT(pimpl_);
-  if (pimpl_) {
-    pimpl_->do_terminate();
-  }
-}
-
-// ojobject
- 
-ojobject & ojobject::operator = (ojobject && rhs)
-{
-  pimpl_ = std::move(rhs.pimpl_);
-  return *this;
-}
-
-void ojobject::terminate()
-{
-  BOOST_ASSERT(pimpl_);
-  if (pimpl_) {
-    pimpl_->do_terminate();
-  }
-}
-
 // pretty_ojnode
 
 shared_ptr<ojnode>
