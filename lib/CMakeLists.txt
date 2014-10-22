@@ -4,6 +4,7 @@ add_library(jios
     json_oj.cpp
     jin.cpp
     protobuf_oj.cpp
+    protobuf_ij.cpp
 )
 
 target_link_libraries(jios
