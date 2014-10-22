@@ -12,16 +12,16 @@ typedef ijnode ijvalue;
 class ijpair;
 class ijsource;
 
-void jios_read(ijnode & ij, bool & dest);
-void jios_read(ijnode & ij, std::string & dest);
-void jios_read(ijnode & ij, int64_t & dest);
-void jios_read(ijnode & ij, double & dest);
+void jios_read(ijvalue & ij, bool & dest);
+void jios_read(ijvalue & ij, std::string & dest);
+void jios_read(ijvalue & ij, int64_t & dest);
+void jios_read(ijvalue & ij, double & dest);
 
-void jios_read(ijnode & ij, int32_t & dest);
-void jios_read(ijnode & ij, uint32_t & dest);
-void jios_read(ijnode & ij, uint64_t & dest);
-void jios_read(ijnode & ij, float & dest);
-void jios_read(ijnode & src, ojnode & dest);
+void jios_read(ijvalue & ij, int32_t & dest);
+void jios_read(ijvalue & ij, uint32_t & dest);
+void jios_read(ijvalue & ij, uint64_t & dest);
+void jios_read(ijvalue & ij, float & dest);
+void jios_read(ijvalue & src, ojnode & dest);
 
 //! Stream of JSON-ish values (base for ijarray and ijobject)
 

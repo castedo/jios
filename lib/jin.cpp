@@ -26,7 +26,7 @@ void json_copy_if_no_fail(ijnode & src, ojnode & dest)
 {
   T tmp;
   if (src.read(tmp)) {
-    dest.print(tmp);
+    dest.write(tmp);
   }
 }
 
@@ -71,7 +71,7 @@ void jios_read(ijnode & src, ojnode & dest)
   switch (src.type()) {
     case json_type::jnull:
       src.ignore();
-      dest.print_null();
+      dest.write_null();
       break;
     case json_type::jbool:
       json_copy_if_no_fail<bool>(src, dest);

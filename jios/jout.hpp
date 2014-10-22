@@ -13,6 +13,21 @@ class ojnode;
 typedef ojnode ojvalue;
 typedef ojnode ojsink;
 
+void jios_write(ojvalue & oj, bool src);
+void jios_write(ojvalue & oj, std::string const& src);
+void jios_write(ojvalue & oj, int64_t src);
+void jios_write(ojvalue & oj, double src);
+
+void jios_write(ojvalue & oj, char src);
+void jios_write(ojvalue & oj, char const* src);
+void jios_write(ojvalue & oj, int32_t src);
+void jios_write(ojvalue & oj, uint32_t src);
+void jios_write(ojvalue & oj, long src);
+void jios_write(ojvalue & oj, float src);
+
+template<typename T>
+void jios_write(boost::optional<T> const& ov);
+
 //! Base for streams of JSON-ish values
 
 class ojstreamoid
@@ -81,23 +96,12 @@ class ojnode
 public:
   ~ojnode() {}
 
-  void print_null() { return do_print_null(); }
-  void print(int32_t const& value) { return do_print(value); }
-  void print(uint32_t const& value) { return do_print(value); }
-  void print(int64_t const& value) { return do_print(value); }
-  void print(uint64_t const& value) { return do_print(value); }
-  void print(long const& value) { return do_print(int64_t(value)); }
-  void print(double const& value) { return do_print(value); }
-  void print(float const& value) { return do_print(value); }
-  void print(bool const& value) { return do_print(value); }
-  void print(char ch) { return do_print(ch); }
-  void print(char const* p) { return do_print(p); }
-  void print(std::string const& value) { return do_print(value); }
-
-  template<typename T> void print(boost::optional<T> const& ov);
+  void write_null() { do_print_null(); }
 
   template<typename T>
-  void write(T const& src) { return this->print(src); }
+  void write(T const& src) { jios_write(*this, src); }
+
+  void print(std::string const& value) { this->write(value); }
 
   ojarray array(bool multimode = false)
   {
@@ -122,16 +126,15 @@ public:
   void flush() { do_flush(); }
 
 protected:
+  friend void jios_write(ojvalue & oj, bool src);
+  friend void jios_write(ojvalue & oj, std::string const& src);
+  friend void jios_write(ojvalue & oj, int64_t src);
+  friend void jios_write(ojvalue & oj, double src);
+
   virtual void do_print_null() = 0;
-  virtual void do_print(int32_t const& value) = 0;
-  virtual void do_print(uint32_t const& value) = 0;
-  virtual void do_print(int64_t const& value) = 0;
-  virtual void do_print(uint64_t const& value) = 0;
-  virtual void do_print(double const& value) = 0;
-  virtual void do_print(float const& value) = 0;
-  virtual void do_print(bool const& value) = 0;
-  virtual void do_print(char ch) = 0;
-  virtual void do_print(char const* p) = 0;
+  virtual void do_print(int64_t value) = 0;
+  virtual void do_print(double value) = 0;
+  virtual void do_print(bool value) = 0;
   virtual void do_print(std::string const& value) = 0;
 
   virtual ojarray do_begin_array(bool multimode) = 0;
@@ -147,6 +150,16 @@ protected:
   virtual void do_key(std::string const& k) = 0;
 };
 
+////////////////////////////////////////
+/// inline method implementations
+
+inline
+ojvalue & ojobject::put(std::string const& k)
+{
+  pimpl_->do_key(k);
+  return *pimpl_;
+}
+
 inline ojnode & ojobject::operator [] (std::string const& k)
 {
   pimpl_->do_key(k);
@@ -160,15 +173,40 @@ ojnode & ojobject::operator [] (T const& k)
   return *pimpl_;
 }
 
-template<typename T>
-void ojnode::print(boost::optional<T> const& ov)
+inline
+void jios_write(ojvalue & oj, bool src)
 {
-  if (ov) { this->print(*ov); }
-  else { this->print_null(); }
+  oj.do_print(src);
 }
 
-////////////////////////////////////////
-/// inline method implementations
+inline
+void jios_write(ojvalue & oj, std::string const& src)
+{
+  oj.do_print(src);
+}
+
+inline
+void jios_write(ojvalue & oj, int64_t src)
+{
+  oj.do_print(src);
+}
+
+inline
+void jios_write(ojvalue & oj, double src)
+{
+  oj.do_print(src);
+}
+
+template<typename T>
+void jios_write(ojvalue & oj, boost::optional<T> const& ov)
+{
+  if (ov) {
+    T const& v = *ov;
+    oj.write(v);
+  } else {
+    oj.write_null();
+  }
+}
 
 inline
 ojstreamoid & ojstreamoid::operator = (ojstreamoid && rhs)
@@ -196,7 +234,7 @@ template<typename T> inline
 ojstream & ojstream::operator << (T const& src)
 {
   if (pimpl_) {
-    pimpl_->print(src);
+    pimpl_->write(src);
   }
   return *this;
 }

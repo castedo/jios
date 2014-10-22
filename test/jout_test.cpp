@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE( lined_json_test )
 {
   ostringstream ss;
   ojobject ojo = lined_json_out(ss).put().begin_object(true);
-  ojarray oja = ojo["A"].begin_array(true);
+  ojarray oja = ojo.put("A").array(true);
   BOOST_CHECK_EQUAL( ss.str(), "{\"A\":[" );
   oja->print("B");
   BOOST_CHECK_EQUAL( ss.str(), "{\"A\":[\"B\"" );

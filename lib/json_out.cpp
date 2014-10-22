@@ -2,6 +2,7 @@
 
 #include <boost/core/null_deleter.hpp>
 #include <boost/optional.hpp>
+#include <boost/type_traits/make_unsigned.hpp>
 
 using namespace std;
 
@@ -79,19 +80,14 @@ public:
     init(in_object);
   }
 
+protected:
   template<typename T> void do_print_impl(T const& value);
 
-  virtual void do_print_null();
-  virtual void do_print(int32_t const& value) { do_print_impl(value); }
-  virtual void do_print(uint32_t const& value) { do_print_impl(value); }
-  virtual void do_print(int64_t const& value) { do_print_impl(value); }
-  virtual void do_print(uint64_t const& value) { do_print_impl(value); }
-  virtual void do_print(double const& value) { do_print_impl(value); }
-  virtual void do_print(float const& value) { do_print_impl(value); }
-  virtual void do_print(bool const& value) { do_print_impl(value); }
-  virtual void do_print(char ch) { do_print_impl(std::string(1, ch)); }
-  virtual void do_print(char const* p) { do_print_impl(std::string(p)); }
-  virtual void do_print(std::string const& value) { do_print_impl(value); }
+  void do_print_null() override;
+  void do_print(int64_t value) override { do_print_impl(value); }
+  void do_print(double value) override { do_print_impl(value); }
+  void do_print(bool value) override { do_print_impl(value); }
+  void do_print(std::string const& value) override { do_print_impl(value); }
 
   virtual ojarray do_begin_array(bool multimode);
   virtual ojobject do_begin_object(bool multimode);

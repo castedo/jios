@@ -25,7 +25,7 @@ void print_field(ojnode & oj,
                 )
 {
   T value = (reflec->*get_meth)(pro, field);
-  oj.print(value);
+  oj.write(value);
 }
 
 template<typename T>
@@ -41,7 +41,7 @@ void print_field(ojnode & oj,
                 )
 {
   T value = (reflec->*get_meth)(pro, field, index);
-  oj.print(value);
+  oj.write(value);
 }
 
 void print_singular_field(ojnode & oj,
@@ -62,9 +62,6 @@ void print_singular_field(ojnode & oj,
     case FieldDescriptor::CppType::CPPTYPE_UINT32:
       print_field(oj, pro, field, reflec, &Reflection::GetUInt32);
       break;
-    case FieldDescriptor::CppType::CPPTYPE_UINT64:
-      print_field(oj, pro, field, reflec, &Reflection::GetUInt64);
-      break;
     case FieldDescriptor::CppType::CPPTYPE_DOUBLE:
       print_field(oj, pro, field, reflec, &Reflection::GetDouble);
       break;
@@ -77,6 +74,7 @@ void print_singular_field(ojnode & oj,
     case FieldDescriptor::CppType::CPPTYPE_MESSAGE:
       print_proto_type(oj, reflec->GetMessage(pro, field));
       break;
+    case FieldDescriptor::CppType::CPPTYPE_UINT64:
     case FieldDescriptor::CppType::CPPTYPE_ENUM:
     default:
       oj.print("UNIMPLEMENTED");
@@ -102,9 +100,6 @@ void print_repeated_field(ojnode & oj,
     case FieldDescriptor::CppType::CPPTYPE_UINT32:
       print_field(oj, pro, field, idx, reflec, &Reflection::GetRepeatedUInt32);
       break;
-    case FieldDescriptor::CppType::CPPTYPE_UINT64:
-      print_field(oj, pro, field, idx, reflec, &Reflection::GetRepeatedUInt64);
-      break;
     case FieldDescriptor::CppType::CPPTYPE_DOUBLE:
       print_field(oj, pro, field, idx, reflec, &Reflection::GetRepeatedDouble);
       break;
@@ -117,6 +112,7 @@ void print_repeated_field(ojnode & oj,
     case FieldDescriptor::CppType::CPPTYPE_MESSAGE:
       print_proto_type(oj, reflec->GetRepeatedMessage(pro, field, idx));
       break;
+    case FieldDescriptor::CppType::CPPTYPE_UINT64:
     case FieldDescriptor::CppType::CPPTYPE_ENUM:
     default:
       oj.print("UNIMPLEMENTED");
