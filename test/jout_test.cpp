@@ -1,6 +1,6 @@
 #include <boost/test/unit_test.hpp>
 
-#include <jios/json_oj.hpp>
+#include <jios/json_out.hpp>
 
 using namespace std;
 using namespace jios;

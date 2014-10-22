@@ -27,15 +27,16 @@ Features
 Examples
 --------
 
-```cpp
-json_out(cout, '\n') << 1 << 2 << "three";
+### Print JSON
 
+```cpp
+  json_out(cout, '\n') << 1 << 2 << "three";
 ```
 outputs
 ```
-1
-2
-"three"
+  1
+  2
+  "three"
 ```
 
 ```cpp
@@ -48,7 +49,15 @@ outputs
 ```
 outputs
 ```
-[0, 1, 2]
+  [0, 1, 2]
+```
+
+### Parse JSON
+```cpp
+  istringstream ss("1 \"two\" 3");
+  int i, j;
+  string s;
+  json_in(ss) >> i >> s >> j;
 ```
 
 

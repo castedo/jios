@@ -1,6 +1,6 @@
 #include <jios/protobuf_oj.hpp>
 
-#include <jios/json_oj.hpp>
+#include <jios/json_out.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/assert.hpp>
 
