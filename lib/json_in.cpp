@@ -262,6 +262,9 @@ streamsize jsonc_parser_node::parse_some(const char* buf, streamsize len)
     json_tokener_reset(p_toky_);
     return 0;
   }
+  if (p_toky_->char_offset == 0) {
+    set_failbit();
+  }
   return p_toky_->char_offset;
 }
 
@@ -297,8 +300,8 @@ public:
 
 private:
   bool do_pending() override;
+  bool do_new_pending();
   void autonext() override;
-  bool do_ready();
   void parse();
 
   vector<char> buf_;
@@ -323,6 +326,9 @@ bool jsonc_root_ijnode::do_pending()
 
 void readsome_until_nonws(istream & is, vector<char> & buf, streamsize & count)
 {
+  if (!count) {
+    count = is.readsome(buf.data(), buf.size());
+  }
   char const* it = buf.data();
   while (count > 0 && ::isspace(*it)) {
     ++it;
@@ -337,25 +343,17 @@ void readsome_until_nonws(istream & is, vector<char> & buf, streamsize & count)
   }
 }
 
-bool jsonc_root_ijnode::do_ready()
+bool jsonc_root_ijnode::do_new_pending()
 {
-  return p_node_;
-}
-
-void jsonc_root_ijnode::parse()
-{
-  BOOST_ASSERT(!p_node_);
+  BOOST_ASSERT(p_is_);
+  if (!p_is_) return false;
+  if (fail()) return false;
   istream & is = p_is_->stream();
-  while (!p_node_ && is.good()) {
-
-    if (!bytes_avail_) {
-      bytes_avail_ = is.readsome(buf_.data(), buf_.size());
-      readsome_until_nonws(is, buf_, bytes_avail_);
-    }
+  if (!p_node_) {
+    readsome_until_nonws(is, buf_, bytes_avail_);
     if (bytes_avail_) {
       dirty_ = true;
     }
-
     while (bytes_avail_ > 0 && !p_node_ && !fail()) {
       streamsize parsed = parse_some(buf_.data(), bytes_avail_);
       if (!fail()) {
@@ -363,28 +361,28 @@ void jsonc_root_ijnode::parse()
         if (bytes_avail_ > 0) {
           char const* rest = buf_.data() + parsed;
           copy(rest, rest + bytes_avail_, buf_.data());
-        }
-        if (!bytes_avail_) {
-          char * dest = buf_.data() + bytes_avail_;
-          char * end = buf_.data() + buf_.size();
-          bytes_avail_ += is.readsome(dest, end - dest);
+        } else {
+          bytes_avail_ = is.readsome(buf_.data(), buf_.size());
         }
       }
     }
     if (p_node_) {
-      BOOST_ASSERT(!fail());
       readsome_until_nonws(is, buf_, bytes_avail_);
       dirty_ = (bytes_avail_ > 0);
     }
-    if (bytes_avail_) {
-      dirty_ = true;
-    }
+  }
+  return is.good() && !p_node_;
+}
 
-    if (!bytes_avail_ && this->do_pending()) {
+void jsonc_root_ijnode::parse()
+{
+  BOOST_ASSERT(!p_node_);
+  istream & is = p_is_->stream();
+  while (do_pending()) {
+    if (do_new_pending()) {
       is.peek();
     }
   }
-
   if (is.eof() && dirty_) {
     BOOST_ASSERT(!p_node_);
     BOOST_ASSERT(!bytes_avail_);

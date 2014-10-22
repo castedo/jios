@@ -14,5 +14,6 @@ BOOST_AUTO_TEST_CASE( simple_jin_test )
   BOOST_CHECK_EQUAL( i, 1 );
   BOOST_CHECK_EQUAL( s, "two" );
   BOOST_CHECK_EQUAL( j, 3 );
+  BOOST_CHECK( ss.eof() );
 }
 
