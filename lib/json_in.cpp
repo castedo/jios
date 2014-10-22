@@ -242,6 +242,7 @@ public:
     , p_toky_(json_tokener_new())
     , buf_(4096)
     , bytes_avail_(0)
+    , dirty_(false)
   {
     if (!p_toky_) {
       BOOST_THROW_EXCEPTION(bad_alloc());
@@ -262,11 +263,13 @@ private:
   bool do_pending() override;
   void autonext() override;
 
+  bool ready();
   void parse();
 
   json_tokener * const p_toky_;
   vector<char> buf_;
   streamsize bytes_avail_;
+  bool dirty_;
 };
 
 void jsonc_root_ijnode::autonext()
@@ -300,11 +303,15 @@ void readsome_until_nonws(istream & is, vector<char> & buf, streamsize & count)
   }
 }
 
+bool jsonc_root_ijnode::ready()
+{
+  return p_node_;
+}
+
 void jsonc_root_ijnode::parse()
 {
   BOOST_ASSERT(p_toky_);
   BOOST_ASSERT(!p_node_);
-  bool nonws = false;
   istream & is = p_is_->stream();
   while (!p_node_ && is.good()) {
 
@@ -313,7 +320,7 @@ void jsonc_root_ijnode::parse()
       readsome_until_nonws(is, buf_, bytes_avail_);
     }
     if (bytes_avail_) {
-      nonws = true;
+      dirty_ = true;
     }
 
     json_tokener_error jerr = json_tokener_continue;
@@ -339,9 +346,10 @@ void jsonc_root_ijnode::parse()
     if (p_node_) {
       BOOST_ASSERT(jerr == json_tokener_success);
       readsome_until_nonws(is, buf_, bytes_avail_);
+      dirty_ = (bytes_avail_ > 0);
     }
     if (bytes_avail_) {
-      nonws = true;
+      dirty_ = true;
     }
 
     if (!bytes_avail_ && this->do_pending()) {
@@ -349,10 +357,12 @@ void jsonc_root_ijnode::parse()
     }
   }
 
-  if (is.eof() && nonws) {
+  if (is.eof() && dirty_) {
+    BOOST_ASSERT(!p_node_);
     BOOST_ASSERT(!bytes_avail_);
     buf_[0] = '\0';
     p_node_ = json_tokener_parse_ex(p_toky_, buf_.data(), -1);
+    dirty_ = false;
     json_tokener_error jerr = json_tokener_get_error(p_toky_);
     if (jerr != json_tokener_success) {
       set_failbit();
