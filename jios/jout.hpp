@@ -6,12 +6,14 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
 
+#define DEPRECATED __attribute__((deprecated))
+
 namespace jios {
 
 
-class ojnode;
-typedef ojnode ojvalue;
-typedef ojnode ojsink;
+class ojvalue;
+typedef ojvalue ojnode;
+class ojsink;
 
 void jios_write(ojvalue & oj, bool src);
 void jios_write(ojvalue & oj, std::string const& src);
@@ -69,9 +71,11 @@ class ojarray
 public:
   ojarray(std::shared_ptr<ojsink> const& p) : ojstream(p) {}
 
-  ojnode & operator * () { return *pimpl_; }
+  ojvalue & put();
 
-  ojnode * operator -> () { return pimpl_.get(); }
+  ojvalue & operator * ();
+
+  ojvalue * operator -> ();
 };
 
 // ojobject
@@ -84,17 +88,17 @@ public:
 
   ojvalue & put(std::string const& k);
 
-  ojnode & operator [] (std::string const& k);
+  ojvalue & operator [] (std::string const& k);
 
-  template<typename T> ojnode & operator [] (T const& k);
+  template<typename T> ojvalue & operator [] (T const& k);
 };
 
-// ojnode
+// ojvalue
 
-class ojnode
+class ojvalue
 {
 public:
-  ~ojnode() {}
+  virtual ~ojvalue() {}
 
   void write_null() { do_print_null(); }
 
@@ -146,6 +150,16 @@ protected:
   friend class ojobject;
 
   virtual void do_flush() = 0;
+};
+
+class ojsink
+  : protected ojvalue
+{
+  friend class ojstreamoid;
+  friend class ojstream;
+  friend class ojarray;
+  friend class ojobject;
+
   virtual void do_terminate() = 0;
   virtual void do_key(std::string const& k) = 0;
 };
@@ -154,20 +168,27 @@ protected:
 /// inline method implementations
 
 inline
+ojvalue & ojarray::put() { return *pimpl_; }
+
+inline ojvalue & ojarray::operator * () { return *pimpl_; }
+
+inline ojvalue * ojarray::operator -> () { return pimpl_.get(); }
+
+inline
 ojvalue & ojobject::put(std::string const& k)
 {
   pimpl_->do_key(k);
   return *pimpl_;
 }
 
-inline ojnode & ojobject::operator [] (std::string const& k)
+inline ojvalue & ojobject::operator [] (std::string const& k)
 {
   pimpl_->do_key(k);
   return *pimpl_;
 }
 
 template<typename T>
-ojnode & ojobject::operator [] (T const& k)
+ojvalue & ojobject::operator [] (T const& k)
 {
   pimpl_->do_key(boost::lexical_cast<std::string>(k));
   return *pimpl_;

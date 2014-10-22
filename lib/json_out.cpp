@@ -50,7 +50,7 @@ void json_escape(std::basic_ostream<Ch> & out, std::basic_string<Ch> const& in)
 // ostream_ojnode
 
 class ostream_ojnode
-  : public ojnode
+  : public ojsink
   , public enable_shared_from_this<ostream_ojnode>
   , boost::noncopyable
 {
@@ -101,9 +101,9 @@ protected:
 private:
   void init(bool object);
   virtual void post_comma_whitespace() {}
-  virtual shared_ptr<ojnode> make_sub_struct(shared_ptr<ostream> const& os,
-                                            bool in_object,
-                                            bool multimode);
+  virtual shared_ptr<ojsink> make_sub_struct(shared_ptr<ostream> const& os,
+                                             bool in_object,
+                                             bool multimode);
   virtual void pre_close_whitespace() {}
 
   void do_open();
@@ -151,9 +151,9 @@ private:
   }
 
   virtual void post_comma_whitespace();
-  virtual shared_ptr<ojnode> make_sub_struct(shared_ptr<ostream> const& os,
-                                            bool in_object,
-                                            bool multimode);
+  virtual shared_ptr<ojsink> make_sub_struct(shared_ptr<ostream> const& os,
+                                             bool in_object,
+                                             bool multimode);
   virtual void pre_close_whitespace();
 
   void newline();
@@ -202,7 +202,7 @@ void ostream_ojnode::do_print_impl(T const& value)
   }
 }
 
-shared_ptr<ojnode>
+shared_ptr<ojsink>
     ostream_ojnode::make_sub_struct(shared_ptr<ostream> const& os,
                                          bool in_object,
                                          bool multimode)
@@ -308,7 +308,7 @@ void ostream_ojnode::out_suffix()
 
 // pretty_ojnode
 
-shared_ptr<ojnode>
+shared_ptr<ojsink>
     pretty_ojnode::make_sub_struct(shared_ptr<ostream> const& os,
                                            bool in_object,
                                            bool multimode)
