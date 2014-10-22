@@ -226,7 +226,56 @@ void jsonc_object_ijsource::autonext()
   init();
 }
 
-class jsonc_root_ijnode : public jsonc_ijnode
+class jsonc_parser_node : public jsonc_ijnode
+{
+public:
+  jsonc_parser_node(shared_ptr<istream_jin_state> const& p_is)
+    : jsonc_ijnode(p_is)
+    , p_toky_(json_tokener_new())
+  {
+    if (!p_toky_) {
+      BOOST_THROW_EXCEPTION(bad_alloc());
+    }
+  }
+
+  ~jsonc_parser_node()
+   {
+     if (p_toky_) {
+       json_tokener_free(p_toky_);
+     }
+   }
+
+protected:
+  streamsize parse_some(const char* p, streamsize n);
+  void compel_parse();
+
+private:
+  json_tokener * const p_toky_;
+};
+
+streamsize jsonc_parser_node::parse_some(const char* buf, streamsize len)
+{
+  p_node_ = json_tokener_parse_ex(p_toky_, buf, len);
+  json_tokener_error jerr = json_tokener_get_error(p_toky_);
+  if (jerr != json_tokener_continue && jerr != json_tokener_success) {
+    set_failbit();
+    json_tokener_reset(p_toky_);
+    return 0;
+  }
+  return p_toky_->char_offset;
+}
+
+void jsonc_parser_node::compel_parse()
+{
+  p_node_ = json_tokener_parse_ex(p_toky_, "", -1);
+  json_tokener_error jerr = json_tokener_get_error(p_toky_);
+  if (jerr != json_tokener_success) {
+    set_failbit();
+    json_tokener_reset(p_toky_);
+  }
+}
+
+class jsonc_root_ijnode : public jsonc_parser_node
 {
 public:
   string do_key() const override
@@ -235,38 +284,23 @@ public:
     return string(); 
   }
 
-  jsonc_root_ijnode() = delete;
-
   jsonc_root_ijnode(shared_ptr<istream> const& p_is)
-    : jsonc_ijnode(make_shared<istream_jin_state>(p_is))
-    , p_toky_(json_tokener_new())
+    : jsonc_parser_node(make_shared<istream_jin_state>(p_is))
     , buf_(4096)
     , bytes_avail_(0)
     , dirty_(false)
   {
-    if (!p_toky_) {
-      BOOST_THROW_EXCEPTION(bad_alloc());
-    }
     parse();
   }
-
-  ~jsonc_root_ijnode()
-   {
-     if (p_toky_) {
-       json_tokener_free(p_toky_);
-     }
-   }
 
   bool pending() { return do_pending(); }
 
 private:
   bool do_pending() override;
   void autonext() override;
-
-  bool ready();
+  bool do_ready();
   void parse();
 
-  json_tokener * const p_toky_;
   vector<char> buf_;
   streamsize bytes_avail_;
   bool dirty_;
@@ -303,14 +337,13 @@ void readsome_until_nonws(istream & is, vector<char> & buf, streamsize & count)
   }
 }
 
-bool jsonc_root_ijnode::ready()
+bool jsonc_root_ijnode::do_ready()
 {
   return p_node_;
 }
 
 void jsonc_root_ijnode::parse()
 {
-  BOOST_ASSERT(p_toky_);
   BOOST_ASSERT(!p_node_);
   istream & is = p_is_->stream();
   while (!p_node_ && is.good()) {
@@ -323,28 +356,23 @@ void jsonc_root_ijnode::parse()
       dirty_ = true;
     }
 
-    json_tokener_error jerr = json_tokener_continue;
-    while (bytes_avail_ > 0 && jerr == json_tokener_continue) {
-      p_node_ = json_tokener_parse_ex(p_toky_, buf_.data(), bytes_avail_);
-      jerr = json_tokener_get_error(p_toky_);
-      bytes_avail_ -= p_toky_->char_offset;
-      if (bytes_avail_ > 0) {
-        char const* rest = buf_.data() + p_toky_->char_offset;
-        copy(rest, rest + bytes_avail_, buf_.data());
+    while (bytes_avail_ > 0 && !p_node_ && !fail()) {
+      streamsize parsed = parse_some(buf_.data(), bytes_avail_);
+      if (!fail()) {
+        bytes_avail_ -= parsed;
+        if (bytes_avail_ > 0) {
+          char const* rest = buf_.data() + parsed;
+          copy(rest, rest + bytes_avail_, buf_.data());
+        }
+        if (!bytes_avail_) {
+          char * dest = buf_.data() + bytes_avail_;
+          char * end = buf_.data() + buf_.size();
+          bytes_avail_ += is.readsome(dest, end - dest);
+        }
       }
-      if (jerr == json_tokener_continue) {
-        BOOST_ASSERT(!bytes_avail_);
-        char * dest = buf_.data() + bytes_avail_;
-        char * end = buf_.data() + buf_.size();
-        bytes_avail_ += is.readsome(dest, end - dest);
-      }
-    }
-    if (jerr != json_tokener_continue && jerr != json_tokener_success) {
-      set_failbit();
-      json_tokener_reset(p_toky_);
     }
     if (p_node_) {
-      BOOST_ASSERT(jerr == json_tokener_success);
+      BOOST_ASSERT(!fail());
       readsome_until_nonws(is, buf_, bytes_avail_);
       dirty_ = (bytes_avail_ > 0);
     }
@@ -360,14 +388,8 @@ void jsonc_root_ijnode::parse()
   if (is.eof() && dirty_) {
     BOOST_ASSERT(!p_node_);
     BOOST_ASSERT(!bytes_avail_);
-    buf_[0] = '\0';
-    p_node_ = json_tokener_parse_ex(p_toky_, buf_.data(), -1);
+    compel_parse();
     dirty_ = false;
-    json_tokener_error jerr = json_tokener_get_error(p_toky_);
-    if (jerr != json_tokener_success) {
-      set_failbit();
-      json_tokener_reset(p_toky_);
-    }
   }
 }
 
