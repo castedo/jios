@@ -7,8 +7,8 @@
 namespace jios {
 
 
-class ijnode;
-typedef ijnode ijvalue;
+class ijvalue;
+typedef ijvalue ijnode;
 class ijpair;
 class ijsource;
 
@@ -105,11 +105,11 @@ enum class json_type {
     jarray,
     jobject};
 
-class ijnode
+class ijvalue
   : boost::noncopyable
 {
 public:
-  virtual ~ijnode() {}
+  virtual ~ijvalue() {}
 
   bool fail() const { return do_get_failbit(); }
   void set_failbit() { do_set_failbit(); }
@@ -117,26 +117,29 @@ public:
   template<typename T>
   bool read(T & dest) { jios_read(*this, dest); return !fail(); }
 
-  bool ignore() { do_ignore(); return !fail(); }
+  bool ignore();
 
-  ijarray array() { return do_begin_array(); }
-  ijobject object() { return do_begin_object(); }
+  ijarray array();
+  ijobject object();
 
-  ijarray begin_array() { return do_begin_array(); }
-  ijobject begin_object() { return do_begin_object(); }
+  DEPRECATED ijarray begin_array() { return this->array(); }
+  DEPRECATED ijobject begin_object() { return this->object(); }
 
   json_type type() const { return do_type(); }
   bool is_array() const { return json_type::jarray == do_type(); }
   bool is_object() const { return json_type::jobject == do_type(); }
 
+protected:
+  ijvalue() : expired_(false) {}
+
 private:
   friend class ijstreamoid;
   friend class ijstream;
 
-  friend void jios_read(ijnode & ij, bool & dest);
-  friend void jios_read(ijnode & ij, std::string & dest);
-  friend void jios_read(ijnode & ij, int64_t & dest);
-  friend void jios_read(ijnode & ij, double & dest);
+  friend void jios_read(ijvalue & ij, bool & dest);
+  friend void jios_read(ijvalue & ij, std::string & dest);
+  friend void jios_read(ijvalue & ij, int64_t & dest);
+  friend void jios_read(ijvalue & ij, double & dest);
 
   virtual bool do_get_failbit() const = 0;
   virtual void do_set_failbit() = 0;
@@ -147,11 +150,13 @@ private:
   virtual void do_parse(double & dest) = 0;
   virtual void do_parse(bool & dest) = 0;
   virtual void do_parse(std::string & dest) = 0;
-  virtual void do_ignore() = 0;
+  virtual void do_continue() = 0;
 
   virtual ijarray do_begin_array() = 0;
   virtual ijobject do_begin_object() = 0;
   virtual bool do_hint_multiline() const { return false; }
+
+  bool expired_; // extracted element read, further reads trigger continue
 };
 
 class ijpair : public ijvalue
@@ -190,16 +195,6 @@ inline void ijstreamoid::set_failbit()
   pimpl_->do_set_failbit();
 }
 
-inline ijvalue & ijstream::get()
-{
-  return *pimpl_;
-}
-
-inline ijvalue const& ijstream::peek()
-{
-  return *pimpl_;
-}
-
 template<typename T>
 inline ijstream & ijstream::operator >> (T & dest)
 {
@@ -214,49 +209,9 @@ inline ijobject & ijobject::operator >> (T & dest)
   return *this;
 }
 
-inline ijpair & ijobject::get()
-{
-  return *pimpl_;
-}
-
-inline ijpair const& ijobject::peek()
-{
-  return *pimpl_;
-}
-
-inline void jios_read(ijnode & ij, bool & dest)
-{
-  ij.do_parse(dest);
-}
-
-inline void jios_read(ijnode & ij, std::string & dest)
-{
-  ij.do_parse(dest);
-}
-
-inline void jios_read(ijnode & ij, int64_t & dest)
-{
-  ij.do_parse(dest);
-}
-
-inline void jios_read(ijnode & ij, double & dest)
-{
-  ij.do_parse(dest);
-}
-
-inline bool ijstreamoid::at_end()
-{
-  return pimpl_->do_is_terminator() || pimpl_->fail();
-}
-
 inline bool ijstreamoid::hint_multiline() const
 { 
   return pimpl_->do_hint_multiline();
-}
-
-inline std::string ijobject::key()
-{
-  return pimpl_->do_key();
 }
 
 

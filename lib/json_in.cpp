@@ -94,7 +94,6 @@ private:
   void do_parse(double & dest) override;
   void do_parse(bool & dest) override;
   void do_parse(string & dest) override;
-  void do_ignore();
 
   ijarray do_begin_array() override;
   ijobject do_begin_object() override;
@@ -107,8 +106,6 @@ private:
   virtual bool do_pending() { return false; }
 
 protected:
-  virtual void autonext() = 0;
-
   shared_ptr<istream_jin_state> p_is_;
   json_object * p_node_;
 };
@@ -151,7 +148,7 @@ class jsonc_array_ijsource : public jsonc_parsed_ijsource
            && json_object_array_length(p_parent_) > 1;
   }
 
-  void autonext() override
+  void do_continue() override
   {
     ++idx_;
     init();
@@ -210,12 +207,12 @@ private:
     p_node_ = (p_member_ ? (struct json_object*)p_member_->v : NULL);
   }
 
-  void autonext() override;
+  void do_continue() override;
 
   lh_entry * p_member_;
 };
 
-void jsonc_object_ijsource::autonext()
+void jsonc_object_ijsource::do_continue()
 {
   BOOST_ASSERT(p_parent_);
   if (p_parent_) {
@@ -299,8 +296,8 @@ public:
   bool pending() { return do_pending(); }
 
 private:
+  void do_continue() override;
   bool do_pending() override;
-  void autonext() override;
   void parse();
 
   vector<char> buf_;
@@ -308,7 +305,7 @@ private:
   bool dirty_;
 };
 
-void jsonc_root_ijnode::autonext()
+void jsonc_root_ijnode::do_continue()
 {
   if (p_node_) {
     json_object_put(p_node_);
@@ -407,7 +404,6 @@ void jsonc_ijnode::do_parse(int64_t & dest)
     return;
   }
   dest = json_object_get_int64(p_node_);
-  autonext();
 }
 
 void jsonc_ijnode::do_parse(double & dest)
@@ -419,7 +415,6 @@ void jsonc_ijnode::do_parse(double & dest)
     return;
   }
   dest = json_object_get_double(p_node_);
-  autonext();
 }
 
 void jsonc_ijnode::do_parse(bool & dest)
@@ -429,7 +424,6 @@ void jsonc_ijnode::do_parse(bool & dest)
     return;
   }
   dest = json_object_get_boolean(p_node_);
-  autonext();
 }
 
 void jsonc_ijnode::do_parse(string & dest)
@@ -461,12 +455,6 @@ void jsonc_ijnode::do_parse(string & dest)
       set_failbit();
       break;
   }
-  autonext();
-}
-
-void jsonc_ijnode::do_ignore()
-{
-  autonext();
 }
 
 ijarray jsonc_ijnode::do_begin_array()
@@ -475,9 +463,7 @@ ijarray jsonc_ijnode::do_begin_array()
     set_failbit();
     return ijarray();
   }
-  shared_ptr<ijsource> pimpl(new jsonc_array_ijsource(p_is_, p_node_));
-  autonext();
-  return ijarray(pimpl);
+  return shared_ptr<ijsource>(new jsonc_array_ijsource(p_is_, p_node_));
 }
 
 ijobject jsonc_ijnode::do_begin_object()
@@ -486,12 +472,8 @@ ijobject jsonc_ijnode::do_begin_object()
     set_failbit();
     return ijobject();
   }
-  shared_ptr<ijsource> pimpl(new jsonc_object_ijsource(p_is_, p_node_));
-  autonext();
-  return ijobject(pimpl);
+  return shared_ptr<ijsource>(new jsonc_object_ijsource(p_is_, p_node_));
 }
-
-
 
 
 // factory functions

@@ -127,7 +127,7 @@ void parse_any_field(ijvalue & ij,
 {
   if (field->is_repeated()) {
     reflec->ClearField(pro, field);
-    ijarray ija = ij.begin_array();
+    ijarray ija = ij.array();
     while (!ija.at_end()) {
       parse_repeated_field(ija.get(), pro, field, reflec);
     }
@@ -145,7 +145,7 @@ void merge_proto_type(ijnode & ij, protobuf::Message & pro)
     ij.set_failbit();
     return;
   }
-  ijobject ijo = ij.begin_object();
+  ijobject ijo = ij.object();
   while (!ijo.at_end()) {
     FieldDescriptor const* field = pd->FindFieldByName(ijo.key());
     if (NULL == field) {

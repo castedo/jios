@@ -7,6 +7,80 @@ using namespace std;
 namespace jios {
 
 
+ijvalue & ijstream::get()
+{
+  return *pimpl_;
+}
+
+ijvalue const& ijstream::peek()
+{
+  return *pimpl_;
+}
+
+ijpair & ijobject::get()
+{
+  return *pimpl_;
+}
+
+ijpair const& ijobject::peek()
+{
+  return *pimpl_;
+}
+
+std::string ijobject::key()
+{
+  return pimpl_->do_key();
+}
+
+bool ijvalue::ignore()
+{
+  do_continue();
+  return !fail();
+}
+
+ijarray ijvalue::array()
+{
+  ijarray ret = do_begin_array();
+  do_continue();
+  return ret;
+}
+
+ijobject ijvalue::object()
+{
+  ijobject ret = do_begin_object();
+  do_continue();
+  return ret;
+}
+
+void jios_read(ijvalue & ij, bool & dest)
+{
+  ij.do_parse(dest);
+  ij.do_continue();
+}
+
+void jios_read(ijvalue & ij, std::string & dest)
+{
+  ij.do_parse(dest);
+  ij.do_continue();
+}
+
+void jios_read(ijvalue & ij, int64_t & dest)
+{
+  ij.do_parse(dest);
+  ij.do_continue();
+}
+
+void jios_read(ijvalue & ij, double & dest)
+{
+  ij.do_parse(dest);
+  ij.do_continue();
+}
+
+bool ijstreamoid::at_end()
+{
+  return pimpl_->do_is_terminator() || pimpl_->fail();
+}
+
 template<typename T>
 void read_int(ijnode & ij, T & dest)
 {
@@ -87,16 +161,16 @@ void jios_read(ijnode & src, ojnode & dest)
       break;
     case json_type::jarray:
       {
-        ijarray ija = src.begin_array();
-        ojarray oja = dest.begin_array(ija.hint_multiline());
+        ijarray ija = src.array();
+        ojarray oja = dest.array(ija.hint_multiline());
         while (!ija.at_end()) { ija >> *oja; }
         oja.terminate();
       }
       break;
     case json_type::jobject:
       {
-        ijobject ijo = src.begin_object();
-        ojobject ojo = dest.begin_object(ijo.hint_multiline());
+        ijobject ijo = src.object();
+        ojobject ojo = dest.object(ijo.hint_multiline());
         while (!ijo.at_end()) {
           ijo.get().read_to_map(ojo);
         }
@@ -126,7 +200,7 @@ public:
   void do_parse(double & dest) override { do_set_failbit(); }
   void do_parse(bool & dest) override { do_set_failbit(); }
   void do_parse(string & dest) override { do_set_failbit(); }
-  void do_ignore() override { do_set_failbit(); }
+  void do_continue() override { do_set_failbit(); }
 
   ijarray do_begin_array() override {
     do_set_failbit();
