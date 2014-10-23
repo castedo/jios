@@ -55,13 +55,11 @@ private:
 
 class jsonc_ijnode : public ijsource
 {
-protected:
-  jsonc_ijnode() = delete;
-
+public:
   jsonc_ijnode(shared_ptr<istream_jin_state> const& p_is,
                json_object * p_node = NULL)
     : p_state_(p_is)
-    , p_node_(p_node)
+    , p_node_(json_object_get(p_node))
   {
   }
 
@@ -72,6 +70,16 @@ protected:
       p_node_ = NULL;
     }
   }
+
+  void reset(json_object * p_node = NULL)
+  {
+    if (p_node_) {
+      json_object_put(p_node_);
+    }
+    p_node_ = json_object_get(p_node);
+  }
+
+  bool is_null() { return !p_node_; }
 
 private:
   bool do_get_failbit() const override
@@ -107,6 +115,7 @@ private:
 
 protected:
   shared_ptr<istream_jin_state> p_state_;
+private:
   json_object * p_node_;
 };
 
@@ -158,7 +167,7 @@ class jsonc_array_ijsource : public jsonc_parsed_ijsource
   {
     BOOST_ASSERT(json_object_is_type(p_parent_, json_type_array));
     if (json_object_is_type(p_parent_, json_type_array)) {
-      p_node_ = json_object_array_get_idx(p_parent_, idx_);
+      this->reset(json_object_array_get_idx(p_parent_, idx_));
     } else {
       this->set_failbit();
     }
@@ -204,7 +213,7 @@ public:
 private:
   void init()
   {
-    p_node_ = (p_member_ ? (struct json_object*)p_member_->v : NULL);
+    this->reset((p_member_ ? (struct json_object*)p_member_->v : NULL));
   }
 
   void do_advance() override;
@@ -270,7 +279,7 @@ private:
 
 streamsize jsonc_parser_node::do_parse_some(const char* buf, streamsize len)
 {
-  p_node_ = json_tokener_parse_ex(p_toky_, buf, len);
+  this->reset(json_tokener_parse_ex(p_toky_, buf, len));
   json_tokener_error jerr = json_tokener_get_error(p_toky_);
   if (jerr != json_tokener_continue && jerr != json_tokener_success) {
     set_failbit();
@@ -285,7 +294,7 @@ streamsize jsonc_parser_node::do_parse_some(const char* buf, streamsize len)
 
 void jsonc_parser_node::do_compel_parse()
 {
-  p_node_ = json_tokener_parse_ex(p_toky_, "", -1);
+  this->reset(json_tokener_parse_ex(p_toky_, "", -1));
   json_tokener_error jerr = json_tokener_get_error(p_toky_);
   if (jerr != json_tokener_success) {
     set_failbit();
@@ -327,10 +336,7 @@ private:
 
 void jsonc_root_ijnode::do_advance()
 {
-  if (p_node_) {
-    json_object_put(p_node_);
-    p_node_ = NULL;
-  }
+  this->reset();
   if (!fail()) { parse(); }
 }
 
@@ -359,12 +365,12 @@ bool jsonc_root_ijnode::do_pending()
   if (!p_is_) return false;
   if (fail()) return false;
   istream & is = p_is_->stream();
-  if (!p_node_) {
+  if (this->is_null()) {
     readsome_until_nonws(is, buf_, bytes_avail_);
     if (bytes_avail_) {
       dirty_ = true;
     }
-    while (bytes_avail_ > 0 && !p_node_ && !fail()) {
+    while (bytes_avail_ > 0 && this->is_null() && !fail()) {
       streamsize parsed = parse_some(buf_.data(), bytes_avail_);
       if (!fail()) {
         bytes_avail_ -= parsed;
@@ -376,23 +382,21 @@ bool jsonc_root_ijnode::do_pending()
         }
       }
     }
-    if (p_node_) {
+    if (!this->is_null()) {
       readsome_until_nonws(is, buf_, bytes_avail_);
       dirty_ = (bytes_avail_ > 0);
     }
   }
-  return is.good() && !p_node_;
+  return is.good() && this->is_null();
 }
 
 void jsonc_root_ijnode::parse()
 {
-  BOOST_ASSERT(!p_node_);
   istream & is = p_is_->stream();
   while (this->pending()) {
     is.peek();
   }
   if (is.eof() && dirty_) {
-    BOOST_ASSERT(!p_node_);
     BOOST_ASSERT(!bytes_avail_);
     compel_parse();
     dirty_ = false;

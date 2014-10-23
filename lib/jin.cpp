@@ -10,30 +10,36 @@ namespace jios {
 void ijstreamoid::advance()
 {
   pimpl_->do_advance();
+  pimpl_->expired_ = false;
 }
 
 ijvalue & ijstream::get()
 {
+  BOOST_VERIFY(!this->at_end());
   return *pimpl_;
 }
 
 ijvalue const& ijstream::peek()
 {
+  BOOST_VERIFY(!this->at_end());
   return *pimpl_;
 }
 
 ijpair & ijobject::get()
 {
+  BOOST_VERIFY(!this->at_end());
   return *pimpl_;
 }
 
 ijpair const& ijobject::peek()
 {
+  BOOST_VERIFY(!this->at_end());
   return *pimpl_;
 }
 
 string ijobject::key()
 {
+  BOOST_VERIFY(!this->at_end());
   return pimpl_->do_key();
 }
 
@@ -42,52 +48,58 @@ string ijpair::key() const
   return do_key();
 }
 
+void ijvalue::extraction_expiration_boundary()
+{
+//  BOOST_ASSERT(!expired_);
+  if (expired_) { do_advance(); }
+  expired_ = true;
+}
+
 bool ijvalue::ignore()
 {
-  do_advance();
+  extraction_expiration_boundary();
   return !fail();
 }
 
 ijarray ijvalue::array()
 {
-  ijarray ret = do_begin_array();
-  do_advance();
-  return ret;
+  extraction_expiration_boundary();
+  return do_begin_array();
 }
 
 ijobject ijvalue::object()
 {
-  ijobject ret = do_begin_object();
-  do_advance();
-  return ret;
+  extraction_expiration_boundary();
+  return do_begin_object();
 }
 
 void jios_read(ijvalue & ij, bool & dest)
 {
+  ij.extraction_expiration_boundary();
   ij.do_parse(dest);
-  ij.do_advance();
 }
 
 void jios_read(ijvalue & ij, std::string & dest)
 {
+  ij.extraction_expiration_boundary();
   ij.do_parse(dest);
-  ij.do_advance();
 }
 
 void jios_read(ijvalue & ij, int64_t & dest)
 {
+  ij.extraction_expiration_boundary();
   ij.do_parse(dest);
-  ij.do_advance();
 }
 
 void jios_read(ijvalue & ij, double & dest)
 {
+  ij.extraction_expiration_boundary();
   ij.do_parse(dest);
-  ij.do_advance();
 }
 
 bool ijstreamoid::at_end()
 {
+  if (pimpl_->expired_) { advance(); }
   return pimpl_->do_is_terminator() || pimpl_->fail();
 }
 

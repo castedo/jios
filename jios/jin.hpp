@@ -8,7 +8,6 @@ namespace jios {
 
 
 class ijvalue;
-typedef ijvalue ijnode;
 class ijpair;
 class ijsource;
 
@@ -124,20 +123,15 @@ public:
   ijarray array();
   ijobject object();
 
-  DEPRECATED ijarray begin_array() { return this->array(); }
-  DEPRECATED ijobject begin_object() { return this->object(); }
-
   json_type type() const { return do_type(); }
   bool is_array() const { return json_type::jarray == do_type(); }
   bool is_object() const { return json_type::jobject == do_type(); }
 
 protected:
   ijvalue() : expired_(false) {}
-  bool expired_; // extracted element read, another read triggers advance
 
 private:
   friend class ijstreamoid;
-  friend class ijstream;
 
   friend void jios_read(ijvalue & ij, bool & dest);
   friend void jios_read(ijvalue & ij, std::string & dest);
@@ -158,6 +152,9 @@ private:
   virtual ijarray do_begin_array() = 0;
   virtual ijobject do_begin_object() = 0;
   virtual bool do_hint_multiline() const { return false; }
+
+  void extraction_expiration_boundary();
+  bool expired_; // extracted element read, another read triggers advance
 };
 
 class ijpair : public ijvalue
