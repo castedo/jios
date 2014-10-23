@@ -60,7 +60,7 @@ protected:
 
   jsonc_ijnode(shared_ptr<istream_jin_state> const& p_is,
                json_object * p_node = NULL)
-    : p_is_(p_is)
+    : p_state_(p_is)
     , p_node_(p_node)
   {
   }
@@ -76,12 +76,12 @@ protected:
 private:
   bool do_get_failbit() const override
   {
-     return p_is_->fail();
+     return p_state_->fail();
   }
 
   void do_set_failbit() override
   {
-    p_is_->set_failbit();
+    p_state_->set_failbit();
     if (p_node_) {
       json_object_put(p_node_);
       p_node_ = NULL;
@@ -100,13 +100,13 @@ private:
 
   bool do_is_terminator() const override
   {
-    return !p_node_ || p_is_->fail();
+    return !p_node_ || p_state_->fail();
   }
 
   virtual bool do_pending() { return false; }
 
 protected:
-  shared_ptr<istream_jin_state> p_is_;
+  shared_ptr<istream_jin_state> p_state_;
   json_object * p_node_;
 };
 
@@ -223,11 +223,30 @@ void jsonc_object_ijsource::do_advance()
   init();
 }
 
-class jsonc_parser_node : public jsonc_ijnode
+class ijsource_parser : public jsonc_ijnode
+{
+public:
+  ijsource_parser(shared_ptr<istream_jin_state> const& p_is)
+    : jsonc_ijnode(p_is)
+  {}
+
+  streamsize parse_some(const char* p, streamsize n)
+  {
+    return do_parse_some(p, n);
+  }
+
+  void compel_parse() { do_compel_parse(); }
+
+private:
+  virtual streamsize do_parse_some(const char* p, streamsize n) = 0;
+  virtual void do_compel_parse() = 0;
+};
+
+class jsonc_parser_node : public ijsource_parser
 {
 public:
   jsonc_parser_node(shared_ptr<istream_jin_state> const& p_is)
-    : jsonc_ijnode(p_is)
+    : ijsource_parser(p_is)
     , p_toky_(json_tokener_new())
   {
     if (!p_toky_) {
@@ -242,15 +261,14 @@ public:
      }
    }
 
-protected:
-  streamsize parse_some(const char* p, streamsize n);
-  void compel_parse();
-
 private:
+  streamsize do_parse_some(const char* p, streamsize n) override;
+  void do_compel_parse() override;
+
   json_tokener * const p_toky_;
 };
 
-streamsize jsonc_parser_node::parse_some(const char* buf, streamsize len)
+streamsize jsonc_parser_node::do_parse_some(const char* buf, streamsize len)
 {
   p_node_ = json_tokener_parse_ex(p_toky_, buf, len);
   json_tokener_error jerr = json_tokener_get_error(p_toky_);
@@ -265,7 +283,7 @@ streamsize jsonc_parser_node::parse_some(const char* buf, streamsize len)
   return p_toky_->char_offset;
 }
 
-void jsonc_parser_node::compel_parse()
+void jsonc_parser_node::do_compel_parse()
 {
   p_node_ = json_tokener_parse_ex(p_toky_, "", -1);
   json_tokener_error jerr = json_tokener_get_error(p_toky_);
@@ -286,6 +304,7 @@ public:
 
   jsonc_root_ijnode(shared_ptr<istream> const& p_is)
     : jsonc_parser_node(make_shared<istream_jin_state>(p_is))
+    , p_is_(p_state_)
     , buf_(4096)
     , bytes_avail_(0)
     , dirty_(false)
@@ -300,6 +319,7 @@ private:
   bool do_pending() override;
   void parse();
 
+  shared_ptr<istream_jin_state> p_is_;
   vector<char> buf_;
   streamsize bytes_avail_;
   bool dirty_;
@@ -463,7 +483,7 @@ ijarray jsonc_ijnode::do_begin_array()
     set_failbit();
     return ijarray();
   }
-  return shared_ptr<ijsource>(new jsonc_array_ijsource(p_is_, p_node_));
+  return shared_ptr<ijsource>(new jsonc_array_ijsource(p_state_, p_node_));
 }
 
 ijobject jsonc_ijnode::do_begin_object()
@@ -472,7 +492,7 @@ ijobject jsonc_ijnode::do_begin_object()
     set_failbit();
     return ijobject();
   }
-  return shared_ptr<ijsource>(new jsonc_object_ijsource(p_is_, p_node_));
+  return shared_ptr<ijsource>(new jsonc_object_ijsource(p_state_, p_node_));
 }
 
 

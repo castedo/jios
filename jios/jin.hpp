@@ -133,6 +133,7 @@ public:
 
 protected:
   ijvalue() : expired_(false) {}
+  bool expired_; // extracted element read, another read triggers advance
 
 private:
   friend class ijstreamoid;
@@ -157,17 +158,15 @@ private:
   virtual ijarray do_begin_array() = 0;
   virtual ijobject do_begin_object() = 0;
   virtual bool do_hint_multiline() const { return false; }
-
-  bool expired_; // extracted element read, another read triggers advance
 };
 
 class ijpair : public ijvalue
 {
 public:
-  std::string key() const { return do_key(); }
+  std::string key() const;
 
   template<class Map>
-  bool read_to_map(Map & m) { return this->read(m[do_key()]); }
+  bool read_to_map(Map & m) { return this->read(m[this->key()]); }
 
 private:
   friend class ijobject;

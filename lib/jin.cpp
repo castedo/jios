@@ -32,9 +32,14 @@ ijpair const& ijobject::peek()
   return *pimpl_;
 }
 
-std::string ijobject::key()
+string ijobject::key()
 {
   return pimpl_->do_key();
+}
+
+string ijpair::key() const
+{
+  return do_key();
 }
 
 bool ijvalue::ignore()
