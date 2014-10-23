@@ -7,9 +7,9 @@
 
 namespace jios {
 
-void merge_proto_type(ijnode & ij, google::protobuf::Message & pro);
+void merge_proto_type(ijvalue & ij, google::protobuf::Message & pro);
 
-void jios_read(ijnode & ij, google::protobuf::Message & pro);
+void jios_read(ijvalue & ij, google::protobuf::Message & pro);
 
 } // namespace
 

@@ -148,7 +148,7 @@ class jsonc_array_ijsource : public jsonc_parsed_ijsource
            && json_object_array_length(p_parent_) > 1;
   }
 
-  void do_continue() override
+  void do_advance() override
   {
     ++idx_;
     init();
@@ -207,12 +207,12 @@ private:
     p_node_ = (p_member_ ? (struct json_object*)p_member_->v : NULL);
   }
 
-  void do_continue() override;
+  void do_advance() override;
 
   lh_entry * p_member_;
 };
 
-void jsonc_object_ijsource::do_continue()
+void jsonc_object_ijsource::do_advance()
 {
   BOOST_ASSERT(p_parent_);
   if (p_parent_) {
@@ -296,7 +296,7 @@ public:
   bool pending() { return do_pending(); }
 
 private:
-  void do_continue() override;
+  void do_advance() override;
   bool do_pending() override;
   void parse();
 
@@ -305,7 +305,7 @@ private:
   bool dirty_;
 };
 
-void jsonc_root_ijnode::do_continue()
+void jsonc_root_ijnode::do_advance()
 {
   if (p_node_) {
     json_object_put(p_node_);

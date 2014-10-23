@@ -15,7 +15,7 @@ namespace jios {
 
 
 template<typename T>
-void print_field(ojnode & oj,
+void print_field(ojvalue & oj,
                  protobuf::Message const& pro,
                  FieldDescriptor const* field,
                  Reflection const* reflec,
@@ -29,7 +29,7 @@ void print_field(ojnode & oj,
 }
 
 template<typename T>
-void print_field(ojnode & oj,
+void print_field(ojvalue & oj,
                  protobuf::Message const& pro,
                  FieldDescriptor const* field,
                  int index,
@@ -44,7 +44,7 @@ void print_field(ojnode & oj,
   oj.write(value);
 }
 
-void print_singular_field(ojnode & oj,
+void print_singular_field(ojvalue & oj,
                           protobuf::Message const& pro,
                           FieldDescriptor const* field,
                           Reflection const* reflec)
@@ -81,7 +81,7 @@ void print_singular_field(ojnode & oj,
   }
 }
 
-void print_repeated_field(ojnode & oj,
+void print_repeated_field(ojvalue & oj,
                           protobuf::Message const& pro,
                           FieldDescriptor const* field,
                           int idx,
@@ -142,7 +142,7 @@ int print_count(protobuf::Message const& pro,
   return ret;
 }
 
-void print_proto_type(ojnode & oj, protobuf::Message const& pro)
+void print_proto_type(ojvalue & oj, protobuf::Message const& pro)
 {
   Descriptor const* pd = pro.GetDescriptor();
   Reflection const* reflec = pro.GetReflection();

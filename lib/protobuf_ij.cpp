@@ -11,7 +11,7 @@ namespace jios {
 
 
 template<typename T>
-void parse_field(ijnode & ij,
+void parse_field(ijvalue & ij,
                  protobuf::Message * pro,
                  FieldDescriptor const* field,
                  Reflection const* reflec,
@@ -30,7 +30,7 @@ void parse_field(ijnode & ij,
   }
 }
 
-void parse_singular_field(ijnode & ij,
+void parse_singular_field(ijvalue & ij,
                           protobuf::Message * pro,
                           FieldDescriptor const* field,
                           Reflection const* reflec)
@@ -75,7 +75,7 @@ void parse_singular_field(ijnode & ij,
   }
 };
 
-void parse_repeated_field(ijnode & ij,
+void parse_repeated_field(ijvalue & ij,
                           protobuf::Message * pro,
                           FieldDescriptor const* field,
                           Reflection const* reflec)
@@ -136,7 +136,7 @@ void parse_any_field(ijvalue & ij,
   }
 }
 
-void merge_proto_type(ijnode & ij, protobuf::Message & pro)
+void merge_proto_type(ijvalue & ij, protobuf::Message & pro)
 {
   Descriptor const* pd = pro.GetDescriptor();
   Reflection const* reflec = pro.GetReflection();
@@ -156,7 +156,7 @@ void merge_proto_type(ijnode & ij, protobuf::Message & pro)
   }
 }
 
-void jios_read(ijnode & ij, protobuf::Message & pro)
+void jios_read(ijvalue & ij, protobuf::Message & pro)
 {
   pro.Clear();
   merge_proto_type(ij, pro);

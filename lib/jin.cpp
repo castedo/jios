@@ -7,6 +7,11 @@ using namespace std;
 namespace jios {
 
 
+void ijstreamoid::advance()
+{
+  pimpl_->do_advance();
+}
+
 ijvalue & ijstream::get()
 {
   return *pimpl_;
@@ -34,46 +39,46 @@ std::string ijobject::key()
 
 bool ijvalue::ignore()
 {
-  do_continue();
+  do_advance();
   return !fail();
 }
 
 ijarray ijvalue::array()
 {
   ijarray ret = do_begin_array();
-  do_continue();
+  do_advance();
   return ret;
 }
 
 ijobject ijvalue::object()
 {
   ijobject ret = do_begin_object();
-  do_continue();
+  do_advance();
   return ret;
 }
 
 void jios_read(ijvalue & ij, bool & dest)
 {
   ij.do_parse(dest);
-  ij.do_continue();
+  ij.do_advance();
 }
 
 void jios_read(ijvalue & ij, std::string & dest)
 {
   ij.do_parse(dest);
-  ij.do_continue();
+  ij.do_advance();
 }
 
 void jios_read(ijvalue & ij, int64_t & dest)
 {
   ij.do_parse(dest);
-  ij.do_continue();
+  ij.do_advance();
 }
 
 void jios_read(ijvalue & ij, double & dest)
 {
   ij.do_parse(dest);
-  ij.do_continue();
+  ij.do_advance();
 }
 
 bool ijstreamoid::at_end()
@@ -82,7 +87,7 @@ bool ijstreamoid::at_end()
 }
 
 template<typename T>
-void read_int(ijnode & ij, T & dest)
+void read_int(ijvalue & ij, T & dest)
 {
   typedef numeric_limits<T> numeric;
   int64_t tmp;
@@ -96,7 +101,7 @@ void read_int(ijnode & ij, T & dest)
 }
 
 template<typename T>
-void json_copy_if_no_fail(ijnode & src, ojnode & dest)
+void json_copy_if_no_fail(ijvalue & src, ojvalue & dest)
 {
   T tmp;
   if (src.read(tmp)) {
@@ -104,17 +109,17 @@ void json_copy_if_no_fail(ijnode & src, ojnode & dest)
   }
 }
 
-void jios_read(ijnode & ij, int32_t & out)
+void jios_read(ijvalue & ij, int32_t & out)
 {
   read_int(ij, out);
 }
 
-void jios_read(ijnode & ij, uint32_t & out)
+void jios_read(ijvalue & ij, uint32_t & out)
 {
   read_int(ij, out);
 }
 
-void jios_read(ijnode & ij, uint64_t & dest)
+void jios_read(ijvalue & ij, uint64_t & dest)
 {
   int64_t tmp;
   if (ij.read(tmp)) {
@@ -126,7 +131,7 @@ void jios_read(ijnode & ij, uint64_t & dest)
   }
 }
 
-void jios_read(ijnode & ij, float & dest)
+void jios_read(ijvalue & ij, float & dest)
 {
   typedef numeric_limits<float> numeric;
   double tmp;
@@ -140,7 +145,7 @@ void jios_read(ijnode & ij, float & dest)
   }
 }
 
-void jios_read(ijnode & src, ojnode & dest)
+void jios_read(ijvalue & src, ojvalue & dest)
 {
   switch (src.type()) {
     case json_type::jnull:
@@ -180,16 +185,16 @@ void jios_read(ijnode & src, ojnode & dest)
   }
 }
 
-// null_ijnode
+// null_ijvalue
 
-class null_ijnode
+class null_ijvalue
   : public ijsource
-  , public enable_shared_from_this<null_ijnode>
+  , public enable_shared_from_this<null_ijvalue>
 {
   bool fail_;
 
 public:
-  null_ijnode() : fail_(false) {}
+  null_ijvalue() : fail_(false) {}
 
   bool do_get_failbit() const override { return fail_; }
   void do_set_failbit() override { fail_ = true; }
@@ -200,7 +205,7 @@ public:
   void do_parse(double & dest) override { do_set_failbit(); }
   void do_parse(bool & dest) override { do_set_failbit(); }
   void do_parse(string & dest) override { do_set_failbit(); }
-  void do_continue() override { do_set_failbit(); }
+  void do_advance() override { do_set_failbit(); }
 
   ijarray do_begin_array() override {
     do_set_failbit();
@@ -220,7 +225,7 @@ public:
 
 // ijstreamoid
 
-ijstreamoid::ijstreamoid() : pimpl_(new null_ijnode()) {}
+ijstreamoid::ijstreamoid() : pimpl_(new null_ijvalue()) {}
 
 
 } // namespace

@@ -9,7 +9,7 @@
 namespace jios {
 
 
-void print_proto_type(ojnode & oj, google::protobuf::Message const& pro);
+void print_proto_type(ojvalue & oj, google::protobuf::Message const& pro);
 
 void print_proto_type(std::ostream & os,
                       google::protobuf::Message const& pro);

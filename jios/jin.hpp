@@ -21,7 +21,7 @@ void jios_read(ijvalue & ij, int32_t & dest);
 void jios_read(ijvalue & ij, uint32_t & dest);
 void jios_read(ijvalue & ij, uint64_t & dest);
 void jios_read(ijvalue & ij, float & dest);
-void jios_read(ijvalue & src, ojnode & dest);
+void jios_read(ijvalue & src, ojvalue & dest);
 
 //! Stream of JSON-ish values (base for ijarray and ijobject)
 
@@ -42,6 +42,8 @@ public:
   void set_failbit();
 
   bool at_end();
+
+  void advance();
 
   bool hint_multiline() const;
 
@@ -150,13 +152,13 @@ private:
   virtual void do_parse(double & dest) = 0;
   virtual void do_parse(bool & dest) = 0;
   virtual void do_parse(std::string & dest) = 0;
-  virtual void do_continue() = 0;
+  virtual void do_advance() = 0;
 
   virtual ijarray do_begin_array() = 0;
   virtual ijobject do_begin_object() = 0;
   virtual bool do_hint_multiline() const { return false; }
 
-  bool expired_; // extracted element read, further reads trigger continue
+  bool expired_; // extracted element read, another read triggers advance
 };
 
 class ijpair : public ijvalue
