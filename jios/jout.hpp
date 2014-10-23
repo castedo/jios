@@ -2,6 +2,7 @@
 #define JIOS_JOUT_HPP
 
 #include <memory>
+#include <tuple>
 #include <boost/noncopyable.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
@@ -91,6 +92,12 @@ public:
   ojvalue & operator [] (std::string const& k);
 
   template<typename T> ojvalue & operator [] (T const& k);
+
+  template<typename KeyT, typename ValT>
+  ojobject & operator << (std::tuple<KeyT, ValT> const& src);
+
+  template<typename KeyT, typename ValT>
+  ojobject & operator << (std::pair<KeyT, ValT> const& src);
 };
 
 // ojvalue
@@ -251,11 +258,31 @@ ojvalue & ojstream::put()
   return *pimpl_;
 }
 
-template<typename T> inline
+template<typename T>
 ojstream & ojstream::operator << (T const& src)
 {
   if (pimpl_) {
     pimpl_->write(src);
+  }
+  return *this;
+}
+
+template<typename KeyT, typename ValT>
+ojobject & ojobject::operator << (std::tuple<KeyT, ValT> const& src)
+{
+  if (pimpl_) {
+    ojvalue & oj = this->put(std::get<0>(src));
+    oj.write(std::get<1>(src));
+  }
+  return *this;
+}
+
+template<typename KeyT, typename ValT>
+ojobject & ojobject::operator << (std::pair<KeyT, ValT> const& src)
+{
+  if (pimpl_) {
+    ojvalue & oj = this->put(std::get<0>(src));
+    oj.write(std::get<1>(src));
   }
   return *this;
 }

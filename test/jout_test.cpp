@@ -25,6 +25,17 @@ BOOST_AUTO_TEST_CASE( simple_array_test )
   BOOST_CHECK_EQUAL( ss.str(), "[0, 1, 2]" );
 }
 
+BOOST_AUTO_TEST_CASE( simple_object_test )
+{
+  ostringstream ss;
+  ojobject ojo = json_out(ss).put().object();
+  int a = 1 * 1;
+  string b = "BEE";
+  ojo << tie("one", a) << tie("two", b);
+  ojo.terminate();     
+  BOOST_CHECK_EQUAL( ss.str(), R"({"one":1, "two":"BEE"})" );
+}
+
 BOOST_AUTO_TEST_CASE( empty_object_test )
 {
   ostringstream ss;

@@ -24,10 +24,17 @@ Features
   be **streamed** before all JSON is available
 
 
-Examples
---------
+Parsing Examples
+----------------
+```cpp
+  istringstream ss("1 \"two\" 3");
+  int i, j;
+  string s;
+  json_in(ss) >> i >> s >> j;
+```
 
-### Print JSON
+Printing Examples
+-----------------
 
 ```cpp
   json_out(cout, '\n') << 1 << 2 << "three";
@@ -38,6 +45,8 @@ outputs
   2
   "three"
 ```
+
+### JSON Arrays
 
 ```cpp
   ojarray oja = json_out(cout).put().array();
@@ -52,12 +61,18 @@ outputs
   [0, 1, 2]
 ```
 
-### Parse JSON
+### JSON Objects
+
 ```cpp
-  istringstream ss("1 \"two\" 3");
-  int i, j;
-  string s;
-  json_in(ss) >> i >> s >> j;
+  ojobject ojo = json_out(cout).put().object();
+  int a = 1;
+  string b = "BEE";
+  ojo << tie("one", a) << tie("two", b);
+  ojo.terminate();     
+```
+outputs
+```
+  {"one":1, "two":"BEE"}
 ```
 
 
