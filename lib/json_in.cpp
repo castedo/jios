@@ -300,7 +300,6 @@ public:
 
 private:
   bool do_pending() override;
-  bool do_new_pending();
   void autonext() override;
   void parse();
 
@@ -318,22 +317,16 @@ void jsonc_root_ijnode::autonext()
   if (!fail()) { parse(); }
 }
 
-bool jsonc_root_ijnode::do_pending()
-{
-  BOOST_ASSERT(p_is_);
-  return p_is_ && p_is_->stream().good() && !p_node_;
-}
-
 void readsome_until_nonws(istream & is, vector<char> & buf, streamsize & count)
 {
-  if (!count) {
+  if (!count && is.good()) {
     count = is.readsome(buf.data(), buf.size());
   }
   char const* it = buf.data();
   while (count > 0 && ::isspace(*it)) {
     ++it;
     --count;
-    if (!count) {
+    if (!count && is.good()) {
       count = is.readsome(buf.data(), buf.size());
       it = buf.data();
     }
@@ -343,7 +336,7 @@ void readsome_until_nonws(istream & is, vector<char> & buf, streamsize & count)
   }
 }
 
-bool jsonc_root_ijnode::do_new_pending()
+bool jsonc_root_ijnode::do_pending()
 {
   BOOST_ASSERT(p_is_);
   if (!p_is_) return false;
@@ -378,10 +371,8 @@ void jsonc_root_ijnode::parse()
 {
   BOOST_ASSERT(!p_node_);
   istream & is = p_is_->stream();
-  while (do_pending()) {
-    if (do_new_pending()) {
-      is.peek();
-    }
+  while (this->pending()) {
+    is.peek();
   }
   if (is.eof() && dirty_) {
     BOOST_ASSERT(!p_node_);
