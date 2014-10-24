@@ -79,7 +79,7 @@ public:
     p_node_ = json_object_get(p_node);
   }
 
-  bool is_null() { return !p_node_; }
+  bool is_null() const { return !p_node_; }
 
 private:
   bool do_get_failbit() const override
@@ -106,12 +106,12 @@ private:
   ijarray do_begin_array() override;
   ijobject do_begin_object() override;
 
-  bool do_is_terminator() const override
+  bool do_is_terminator() override
   {
     return !p_node_ || p_state_->fail();
   }
 
-  virtual bool do_pending() { return false; }
+  bool do_ready() override { return true; }
 
 protected:
   shared_ptr<istream_jin_state> p_state_;
@@ -321,11 +321,9 @@ public:
     parse();
   }
 
-  bool pending() { return do_pending(); }
-
 private:
   void do_advance() override;
-  bool do_pending() override;
+  bool do_ready() override;
   void parse();
 
   shared_ptr<istream_jin_state> p_is_;
@@ -359,11 +357,11 @@ void readsome_until_nonws(istream & is, vector<char> & buf, streamsize & count)
   }
 }
 
-bool jsonc_root_ijnode::do_pending()
+bool jsonc_root_ijnode::do_ready()
 {
   BOOST_ASSERT(p_is_);
-  if (!p_is_) return false;
-  if (fail()) return false;
+  if (!p_is_) return true;
+  if (fail()) return true;
   istream & is = p_is_->stream();
   if (this->is_null()) {
     readsome_until_nonws(is, buf_, bytes_avail_);
@@ -387,13 +385,13 @@ bool jsonc_root_ijnode::do_pending()
       dirty_ = (bytes_avail_ > 0);
     }
   }
-  return is.good() && this->is_null();
+  return !is.good() || !this->is_null();
 }
 
 void jsonc_root_ijnode::parse()
 {
   istream & is = p_is_->stream();
-  while (this->pending()) {
+  while (!this->ready()) {
     is.peek();
   }
   if (is.eof() && dirty_) {

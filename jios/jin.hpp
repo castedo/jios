@@ -123,9 +123,11 @@ public:
   ijarray array();
   ijobject object();
 
-  json_type type() const { return do_type(); }
-  bool is_array() const { return json_type::jarray == do_type(); }
-  bool is_object() const { return json_type::jobject == do_type(); }
+  json_type type() const;
+  bool is_array() const { return json_type::jarray == this->type(); }
+  bool is_object() const { return json_type::jobject == this->type(); }
+
+  bool ready() { return do_ready(); }
 
 protected:
   ijvalue() : expired_(false) {}
@@ -147,11 +149,13 @@ private:
   virtual void do_parse(double & dest) = 0;
   virtual void do_parse(bool & dest) = 0;
   virtual void do_parse(std::string & dest) = 0;
-  virtual void do_advance() = 0;
 
   virtual ijarray do_begin_array() = 0;
   virtual ijobject do_begin_object() = 0;
   virtual bool do_hint_multiline() const { return false; }
+
+  virtual void do_advance() = 0;
+  virtual bool do_ready() = 0;
 
   void extraction_expiration_boundary();
   bool expired_; // extracted element read, another read triggers advance
@@ -177,7 +181,7 @@ class ijsource : protected ijpair
   friend class ijstream;
   friend class ijobject;
 
-  virtual bool do_is_terminator() const = 0;
+  virtual bool do_is_terminator() = 0;
 };
 
 ////////////////////////////////////////

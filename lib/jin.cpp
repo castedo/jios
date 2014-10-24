@@ -73,6 +73,11 @@ ijobject ijvalue::object()
   return do_begin_object();
 }
 
+json_type ijvalue::type() const
+{
+  return do_type();
+}
+
 void jios_read(ijvalue & ij, bool & dest)
 {
   ij.extraction_expiration_boundary();
@@ -202,47 +207,44 @@ void jios_read(ijvalue & src, ojvalue & dest)
   }
 }
 
-// null_ijvalue
+// null_ijsource
 
-class null_ijvalue
+class null_ijsource
   : public ijsource
-  , public enable_shared_from_this<null_ijvalue>
+  , public enable_shared_from_this<null_ijsource>
 {
-  bool fail_;
+  void debug() const {
+    //TODO: BOOST_ASSERT_MSG(false, "null_ijsource accessed");
+  } 
 
 public:
-  null_ijvalue() : fail_(false) {}
+  null_ijsource() {}
 
-  bool do_get_failbit() const override { return fail_; }
-  void do_set_failbit() override { fail_ = true; }
-
-  json_type do_type() const override { return json_type::jnull; }
-
-  void do_parse(int64_t & dest) override { do_set_failbit(); }
-  void do_parse(double & dest) override { do_set_failbit(); }
-  void do_parse(bool & dest) override { do_set_failbit(); }
-  void do_parse(string & dest) override { do_set_failbit(); }
-  void do_advance() override { do_set_failbit(); }
-
+  bool do_get_failbit() const override { debug(); return true; }
+  void do_set_failbit() override { debug(); }
+  json_type do_type() const override { debug(); return json_type::jnull; }
+  void do_parse(int64_t & dest) override { debug(); }
+  void do_parse(double & dest) override { debug(); }
+  void do_parse(bool & dest) override { debug(); }
+  void do_parse(string & dest) override { debug(); }
   ijarray do_begin_array() override {
-    do_set_failbit();
+    debug();
     return ijarray(shared_from_this());
   }
-
   ijobject do_begin_object() override {
-    do_set_failbit();
+    debug();
     return ijobject(shared_from_this());
   }
-
-  bool do_hint_multiline() const override { return false; }
-
-  bool do_is_terminator() const override { return true; }
-  string do_key() const override { return string(); }
+  bool do_hint_multiline() const override { debug(); return false; }
+  void do_advance() override { debug(); }
+  bool do_ready() override { debug(); return false; }
+  bool do_is_terminator() override { debug(); return true; }
+  string do_key() const override { debug(); return string(); }
 };
 
 // ijstreamoid
 
-ijstreamoid::ijstreamoid() : pimpl_(new null_ijvalue()) {}
+ijstreamoid::ijstreamoid() : pimpl_(new null_ijsource()) {}
 
 
 } // namespace
