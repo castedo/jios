@@ -25,6 +25,13 @@ BOOST_AUTO_TEST_CASE( simple_array_test )
   BOOST_CHECK_EQUAL( ss.str(), "[0, 1, 2]" );
 }
 
+BOOST_AUTO_TEST_CASE( simple_endj_test )
+{
+  ostringstream ss;
+  json_out(ss).put().array() << 1 << 2 << 3 << endj;
+  BOOST_CHECK_EQUAL( ss.str(), "[1, 2, 3]" );
+}
+
 BOOST_AUTO_TEST_CASE( simple_object_test )
 {
   ostringstream ss;

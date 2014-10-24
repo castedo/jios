@@ -5,6 +5,16 @@ using namespace std;
 namespace jios {
 
 
+void endj(ojstream & oj)
+{
+  oj.terminate();
+}
+
+void endj(ojobject & oj)
+{
+  oj.terminate();
+}
+
 void jios_write(ojvalue & oj, char src)
 {
   oj.write(string(src, 1));

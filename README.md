@@ -37,7 +37,7 @@ Printing Examples
 -----------------
 
 ```cpp
-  json_out(cout, '\n') << 1 << 2 << "three";
+  jios::json_out(std::cout, '\n') << 1 << 2 << "three";
 ```
 outputs
 ```
@@ -46,15 +46,21 @@ outputs
   "three"
 ```
 
+In the rest of the examples assume
+
+```cpp
+  using namespace jios;
+  jout = json_out(std::cout);
+```
+
 ### JSON Arrays
 
 ```cpp
-  ojarray oja = json_out(cout).put().array();
+  ojarray oja = jout.put().array();
   for (int i = 0; i < 3; ++i) {
     oja << i;
   }
-  oja.terminate();     
-  cout << endl;
+  oja << endj;
 ```
 outputs
 ```
@@ -64,17 +70,14 @@ outputs
 ### JSON Objects
 
 ```cpp
-  ojobject ojo = json_out(cout).put().object();
   int a = 1;
   string b = "BEE";
-  ojo << tie("one", a) << tie("two", b);
-  ojo.terminate();     
+  jout.put().object() << tie("one", a) << tie("two", b) << endj;
 ```
 outputs
 ```
   {"one":1, "two":"BEE"}
 ```
-
 
 Related Libraries
 -----------------

@@ -62,6 +62,8 @@ public:
   ojvalue & put();
 
   template<typename T> ojstream & operator << (T const& src);
+
+  ojstream & operator << (void (*func)(ojstream &));
 };
 
 // ojarray
@@ -71,8 +73,6 @@ class ojarray
 {
 public:
   ojarray(std::shared_ptr<ojsink> const& p) : ojstream(p) {}
-
-  ojvalue & put();
 
   ojvalue & operator * ();
 
@@ -98,6 +98,8 @@ public:
 
   template<typename KeyT, typename ValT>
   ojobject & operator << (std::pair<KeyT, ValT> const& src);
+
+  ojobject & operator << (void (*func)(ojobject &));
 };
 
 // ojvalue
@@ -171,11 +173,11 @@ class ojsink
   virtual void do_key(std::string const& k) = 0;
 };
 
+void endj(ojstream & oj);
+void endj(ojobject & oj);
+
 ////////////////////////////////////////
 /// inline method implementations
-
-inline
-ojvalue & ojarray::put() { return *pimpl_; }
 
 inline ojvalue & ojarray::operator * () { return *pimpl_; }
 
@@ -267,6 +269,13 @@ ojstream & ojstream::operator << (T const& src)
   return *this;
 }
 
+inline
+ojstream & ojstream::operator << (void (*func)(ojstream &))
+{
+  (*func)(*this);
+  return *this;
+}
+
 template<typename KeyT, typename ValT>
 ojobject & ojobject::operator << (std::tuple<KeyT, ValT> const& src)
 {
@@ -284,6 +293,13 @@ ojobject & ojobject::operator << (std::pair<KeyT, ValT> const& src)
     ojvalue & oj = this->put(std::get<0>(src));
     oj.write(std::get<1>(src));
   }
+  return *this;
+}
+
+inline
+ojobject & ojobject::operator << (void (*func)(ojobject &))
+{
+  (*func)(*this);
   return *this;
 }
 
