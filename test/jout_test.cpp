@@ -1,6 +1,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <jios/json_out.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 using namespace std;
 using namespace jios;
@@ -36,11 +37,19 @@ BOOST_AUTO_TEST_CASE( simple_object_test )
 {
   ostringstream ss;
   ojobject ojo = json_out(ss).put().object();
-  int a = 1 * 1;
   string b = "BEE";
-  ojo << tie("one", a) << tie("two", b);
+  ojo << make_pair("one", 1) << tie("two", b);
   ojo.terminate();     
   BOOST_CHECK_EQUAL( ss.str(), R"({"one":1, "two":"BEE"})" );
+}
+
+BOOST_AUTO_TEST_CASE( ostreamable_type_test )
+{
+  using namespace boost::posix_time;
+  time_duration sleep = hours(7) + seconds(321);
+  ostringstream ss;
+  json_out(ss) << sleep;
+  BOOST_CHECK_EQUAL( ss.str(), R"("07:05:21")" );
 }
 
 BOOST_AUTO_TEST_CASE( empty_object_test )
@@ -48,7 +57,7 @@ BOOST_AUTO_TEST_CASE( empty_object_test )
   ostringstream ss;
   ojstream oj = json_out(ss);
   BOOST_CHECK_EQUAL( ss.str(), "" );
-  ojobject ojo = oj.put().begin_object();
+  ojobject ojo = oj.put().object();
   BOOST_CHECK_EQUAL( ss.str(), "{" );
   ojo.terminate();
   BOOST_CHECK_EQUAL( ss.str(), "{}" );
@@ -59,7 +68,7 @@ BOOST_AUTO_TEST_CASE( empty_array_test )
   ostringstream ss;
   ojstream oj = json_out(ss);
   BOOST_CHECK_EQUAL( ss.str(), "" );
-  ojarray oja = oj.put().begin_array();
+  ojarray oja = oj.put().array();
   BOOST_CHECK_EQUAL( ss.str(), "[" );
   oja.terminate();
   BOOST_CHECK_EQUAL( ss.str(), "[]" );
@@ -68,12 +77,12 @@ BOOST_AUTO_TEST_CASE( empty_array_test )
 BOOST_AUTO_TEST_CASE( lined_json_test )
 {
   ostringstream ss;
-  ojobject ojo = lined_json_out(ss).put().begin_object(true);
+  ojobject ojo = lined_json_out(ss).put().object(true);
   ojarray oja = ojo.put("A").array(true);
   BOOST_CHECK_EQUAL( ss.str(), "{\"A\":[" );
-  oja->print("B");
+  oja << "B";
   BOOST_CHECK_EQUAL( ss.str(), "{\"A\":[\"B\"" );
-  oja->print("C");
+  oja << "C";
   BOOST_CHECK_EQUAL( ss.str(), "{\"A\":[\"B\",\"C\"" );
   oja.terminate();
   BOOST_CHECK_EQUAL( ss.str(), "{\"A\":[\"B\",\"C\"]" );

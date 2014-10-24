@@ -15,16 +15,6 @@ void endj(ojobject & oj)
   oj.terminate();
 }
 
-void jios_write(ojvalue & oj, char src)
-{
-  oj.write(string(src, 1));
-}
-
-void jios_write(ojvalue & oj, char const* src)
-{
-  oj.write(string(src));
-}
-
 void jios_write(ojvalue & oj, int32_t src)
 {
   oj.write(int64_t(src));
@@ -43,6 +33,20 @@ void jios_write(ojvalue & oj, long src)
 void jios_write(ojvalue & oj, float src)
 {
   oj.write(double(src));
+}
+
+void ojvalue::write_string()
+{
+  istreambuf_iterator<char> it(buf_.rdbuf());
+  istreambuf_iterator<char> end;
+  do_print(string(it, end));
+  buf_.clear();
+  buf_.str(string());
+}
+
+ostream & ojvalue::string_value()
+{
+  return buf_;
 }
 
 

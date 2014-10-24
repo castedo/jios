@@ -49,8 +49,9 @@ outputs
 In the rest of the examples assume
 
 ```cpp
+  using namespace std;
   using namespace jios;
-  jout = json_out(std::cout);
+  jout = json_out(cout);
 ```
 
 ### JSON Arrays
@@ -70,9 +71,8 @@ outputs
 ### JSON Objects
 
 ```cpp
-  int a = 1;
   string b = "BEE";
-  jout.put().object() << tie("one", a) << tie("two", b) << endj;
+  jout.put().object() << make_pair("one", 1) << tie("two", b) << endj;
 ```
 outputs
 ```

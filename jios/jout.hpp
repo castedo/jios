@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <tuple>
+#include <sstream>
 #include <boost/noncopyable.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
@@ -16,13 +17,19 @@ class ojvalue;
 typedef ojvalue ojnode;
 class ojsink;
 
+//! Default jios_write uses ostream << (insertion) operator
+//  to write a JSON string value
+
+template<typename T>
+void jios_write(ojvalue & oj, T const& src);
+
+//! Other types can have special jios_write handling if they should not
+//! be serialized to JSON strings by default
+
 void jios_write(ojvalue & oj, bool src);
-void jios_write(ojvalue & oj, std::string const& src);
 void jios_write(ojvalue & oj, int64_t src);
 void jios_write(ojvalue & oj, double src);
 
-void jios_write(ojvalue & oj, char src);
-void jios_write(ojvalue & oj, char const* src);
 void jios_write(ojvalue & oj, int32_t src);
 void jios_write(ojvalue & oj, uint32_t src);
 void jios_write(ojvalue & oj, long src);
@@ -111,6 +118,10 @@ public:
 
   void write_null() { do_print_null(); }
 
+  void write_string();
+
+  std::ostream & string_value();
+
   template<typename T>
   void write(T const& src) { jios_write(*this, src); }
 
@@ -138,9 +149,8 @@ public:
 
   void flush() { do_flush(); }
 
-protected:
+private:
   friend void jios_write(ojvalue & oj, bool src);
-  friend void jios_write(ojvalue & oj, std::string const& src);
   friend void jios_write(ojvalue & oj, int64_t src);
   friend void jios_write(ojvalue & oj, double src);
 
@@ -159,6 +169,8 @@ protected:
   friend class ojobject;
 
   virtual void do_flush() = 0;
+
+  std::stringstream buf_;
 };
 
 class ojsink
@@ -203,14 +215,15 @@ ojvalue & ojobject::operator [] (T const& k)
   return *pimpl_;
 }
 
-inline
-void jios_write(ojvalue & oj, bool src)
+template<typename T>
+void jios_write(ojvalue & oj, T const& src)
 {
-  oj.do_print(src);
+  oj.string_value() << src;
+  oj.write_string();
 }
 
 inline
-void jios_write(ojvalue & oj, std::string const& src)
+void jios_write(ojvalue & oj, bool src)
 {
   oj.do_print(src);
 }

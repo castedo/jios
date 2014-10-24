@@ -77,7 +77,7 @@ void print_singular_field(ojvalue & oj,
     case FieldDescriptor::CppType::CPPTYPE_UINT64:
     case FieldDescriptor::CppType::CPPTYPE_ENUM:
     default:
-      oj.print("UNIMPLEMENTED");
+      oj.write("UNIMPLEMENTED");
   }
 }
 
@@ -115,7 +115,7 @@ void print_repeated_field(ojvalue & oj,
     case FieldDescriptor::CppType::CPPTYPE_UINT64:
     case FieldDescriptor::CppType::CPPTYPE_ENUM:
     default:
-      oj.print("UNIMPLEMENTED");
+      oj.write("UNIMPLEMENTED");
   }
 }
 
