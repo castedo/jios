@@ -51,7 +51,7 @@ In the rest of the examples assume
 ```cpp
   using namespace std;
   using namespace jios;
-  jout = json_out(cout);
+  ojstream jout = json_out(cout);
 ```
 
 ### JSON Arrays
@@ -78,6 +78,30 @@ outputs
 ```
   {"one":1, "two":"BEE"}
 ```
+
+### Use any type with the ostream << (insertion) operator defined
+
+```cpp
+  using namespace boost::posix_time;
+  jout.put().array() << seconds(3) << seconds(2) << seconds(1) << endj;
+```
+outputs
+```
+  ["00:00:03", "00:00:02", "00:00:01"]
+```
+
+Even use such types as JSON object keys.
+
+```cpp
+  using namespace boost::posix_time;
+  jout.put().object() << make_pair(seconds(3), "launch")
+                      << make_pair(seconds(7), "explode") << endj;
+```
+outputs
+```
+  {"00:00:03":"launch", "00:00:07":"explode"}
+```
+
 
 Related Libraries
 -----------------

@@ -35,18 +35,22 @@ void jios_write(ojvalue & oj, float src)
   oj.write(double(src));
 }
 
-void ojvalue::write_string()
+void ojvalue::write_string_value()
 {
-  istreambuf_iterator<char> it(buf_.rdbuf());
+  istreambuf_iterator<char> it(buf_);
   istreambuf_iterator<char> end;
   do_print(it, end);
   buf_.clear();
   buf_.str(string());
 }
 
-ostream & ojvalue::string_value()
+void ojsink::set_key_with_string_value()
 {
-  return buf_;
+  istreambuf_iterator<char> it(buf_);
+  istreambuf_iterator<char> end;
+  do_set_key(it, end);
+  buf_.clear();
+  buf_.str(string());
 }
 
 

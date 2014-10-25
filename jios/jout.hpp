@@ -5,7 +5,6 @@
 #include <tuple>
 #include <sstream>
 #include <boost/noncopyable.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
 
 #define DEPRECATED __attribute__((deprecated))
@@ -16,8 +15,15 @@ namespace jios {
 class ojvalue;
 class ojsink;
 
-//! Default jios_write uses ostream << (insertion) operator
-//  to write a JSON string value
+//! jios_write_string defines how a type is output as a JSON string,
+//! including JSON keys in addition to JSON string values.
+//! Default is to use ostream << (insertion) operator.
+
+template<typename T>
+void jios_write_string(std::ostream & os, T const& src) { os << src; }
+
+//! jios_write defines how a type is output as any JSON value.
+//! Default is to use jios_write_string to write a JSON string value.
 
 template<typename T>
 void jios_write(ojvalue & oj, T const& src);
@@ -93,11 +99,11 @@ class ojobject
 public:
   ojobject(std::shared_ptr<ojsink> const& p) : ojstreamoid(p) {}
 
-  ojvalue & put(std::string const& k);
+  template<typename T>
+  ojvalue & put(T const& key);
 
-  ojvalue & operator [] (std::string const& k);
-
-  template<typename T> ojvalue & operator [] (T const& k);
+  template<typename T>
+  ojvalue & operator [] (T const& k) { return this->put(k); }
 
   template<typename KeyT, typename ValT>
   ojobject & operator << (std::tuple<KeyT, ValT> const& src);
@@ -117,9 +123,9 @@ public:
 
   void write_null() { do_print_null(); }
 
-  void write_string();
+  void write_string_value();
 
-  std::ostream & string_value();
+  std::ostream & string_value() { return buf_; }
 
   template<typename T>
   void write(T const& src) { jios_write(*this, src); }
@@ -169,6 +175,7 @@ private:
   friend class ojstream;
   friend class ojarray;
   friend class ojobject;
+  friend class ojsink;
 
   virtual void do_flush() = 0;
 
@@ -183,8 +190,10 @@ class ojsink
   friend class ojarray;
   friend class ojobject;
 
+  void set_key_with_string_value();
+
   virtual void do_terminate() = 0;
-  virtual void do_key(std::string const& k) = 0;
+  virtual void do_set_key(string_iterator, string_iterator) = 0;
 };
 
 void endj(ojstream & oj);
@@ -197,31 +206,19 @@ inline ojvalue & ojarray::operator * () { return *pimpl_; }
 
 inline ojvalue * ojarray::operator -> () { return pimpl_.get(); }
 
-inline
-ojvalue & ojobject::put(std::string const& k)
-{
-  pimpl_->do_key(k);
-  return *pimpl_;
-}
-
-inline ojvalue & ojobject::operator [] (std::string const& k)
-{
-  pimpl_->do_key(k);
-  return *pimpl_;
-}
-
 template<typename T>
-ojvalue & ojobject::operator [] (T const& k)
+ojvalue & ojobject::put(T const& key)
 {
-  pimpl_->do_key(boost::lexical_cast<std::string>(k));
+  jios_write_string(pimpl_->string_value(), key);
+  pimpl_->set_key_with_string_value();
   return *pimpl_;
 }
 
 template<typename T>
 void jios_write(ojvalue & oj, T const& src)
 {
-  oj.string_value() << src;
-  oj.write_string();
+  jios_write_string(oj.string_value(), src);
+  oj.write_string_value();
 }
 
 inline

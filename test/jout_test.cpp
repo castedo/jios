@@ -50,6 +50,17 @@ BOOST_AUTO_TEST_CASE( ostreamable_type_test )
   ostringstream ss;
   json_out(ss) << sleep;
   BOOST_CHECK_EQUAL( ss.str(), R"("07:05:21")" );
+
+  ss.clear(); ss.str("");
+  ojstream jout = json_out(ss);
+  jout.put().array() << seconds(3) << seconds(2) << seconds(1) << endj;
+  BOOST_CHECK_EQUAL( ss.str(), R"(["00:00:03", "00:00:02", "00:00:01"])" );
+
+  ss.clear(); ss.str("");
+  jout.put().object() << make_pair(seconds(3), "launch")
+                      << make_pair(seconds(7), "explode") << endj;
+  BOOST_CHECK_EQUAL( ss.str(), R"({"00:00:03":"launch", "00:00:07":"explode"})" );
+
 }
 
 BOOST_AUTO_TEST_CASE( empty_object_test )

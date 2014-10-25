@@ -90,7 +90,7 @@ protected:
   virtual ojarray do_begin_array(bool multimode);
   virtual ojobject do_begin_object(bool multimode);
 
-  virtual void do_key(std::string const& k) { prekey_ = k; }
+  void do_set_key(string_iterator, string_iterator) override;
 
   virtual void do_flush();
   void do_close();
@@ -235,6 +235,15 @@ ojobject ostream_ojnode::do_begin_object(bool multimode)
 {
   do_open();
   return this->make_sub_struct(os_, true, multimode);
+}
+
+void ostream_ojnode::do_set_key(string_iterator it, string_iterator end)
+{
+  if (prekey_) {
+    prekey_->assign(it, end);
+  } else {
+    prekey_ = string(it, end);
+  }
 }
 
 void ostream_ojnode::do_flush()
