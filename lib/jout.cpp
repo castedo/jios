@@ -39,7 +39,7 @@ void ojvalue::write_string()
 {
   istreambuf_iterator<char> it(buf_.rdbuf());
   istreambuf_iterator<char> end;
-  do_print(string(it, end));
+  do_print(it, end);
   buf_.clear();
   buf_.str(string());
 }

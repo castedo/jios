@@ -14,7 +14,6 @@ namespace jios {
 
 
 class ojvalue;
-typedef ojvalue ojnode;
 class ojsink;
 
 //! Default jios_write uses ostream << (insertion) operator
@@ -137,17 +136,20 @@ public:
      return do_begin_object(multimode);
   }
 
-  ojarray begin_array(bool multimode = false)
+  DEPRECATED ojarray begin_array(bool multimode = false)
   {
      return do_begin_array(multimode);
   }
 
-  ojobject begin_object(bool multimode = false)
+  DEPRECATED ojobject begin_object(bool multimode = false)
   {
      return do_begin_object(multimode);
   }
 
   void flush() { do_flush(); }
+
+protected:
+  typedef std::istreambuf_iterator<char> string_iterator;
 
 private:
   friend void jios_write(ojvalue & oj, bool src);
@@ -158,7 +160,7 @@ private:
   virtual void do_print(int64_t value) = 0;
   virtual void do_print(double value) = 0;
   virtual void do_print(bool value) = 0;
-  virtual void do_print(std::string const& value) = 0;
+  virtual void do_print(string_iterator, string_iterator) = 0;
 
   virtual ojarray do_begin_array(bool multimode) = 0;
   virtual ojobject do_begin_object(bool multimode) = 0;

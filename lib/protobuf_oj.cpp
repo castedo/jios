@@ -148,7 +148,7 @@ void print_proto_type(ojvalue & oj, protobuf::Message const& pro)
   Reflection const* reflec = pro.GetReflection();
   BOOST_ASSERT(pd && reflec);
   if (!(pd && reflec)) return;
-  ojobject ojo = oj.begin_object(print_count(pro, pd, reflec) > 1);
+  ojobject ojo = oj.object(print_count(pro, pd, reflec) > 1);
   int N = pd->field_count();
   for (int i = 0; i < N; ++i) {
     FieldDescriptor const* field = pd->field(i);
@@ -157,7 +157,7 @@ void print_proto_type(ojvalue & oj, protobuf::Message const& pro)
     if (field->is_repeated()) {
       int M = reflec->FieldSize(pro, field);
       if (M > 0) {
-        ojarray oja = ojo[field->name()].begin_array(M > 1);
+        ojarray oja = ojo[field->name()].array(M > 1);
         for (int j = 0; j < M; ++j) {
           print_repeated_field(*oja, pro, field, j, reflec);
         }

@@ -11,13 +11,11 @@ namespace jios {
 
 // json escaping
 
-template<class Ch>
-void json_escape(std::basic_ostream<Ch> & out, std::basic_string<Ch> const& in)
+template<class Ch, class Iter>
+void json_escape(std::basic_ostream<Ch> & out, Iter && b, Iter && end)
 {
   // Modified version of function from boost PTree code.
-  typename std::basic_string<Ch>::const_iterator b = in.begin();
-  typename std::basic_string<Ch>::const_iterator e = in.end();
-  while (b != e)
+  while (b != end)
   {
       // We escape everything outside ASCII, because this code can't
       // handle high unicode characters.
@@ -87,7 +85,7 @@ protected:
   void do_print(int64_t value) override { do_print_impl(value); }
   void do_print(double value) override { do_print_impl(value); }
   void do_print(bool value) override { do_print_impl(value); }
-  void do_print(std::string const& value) override { do_print_impl(value); }
+  void do_print(string_iterator it, string_iterator end);
 
   virtual ojarray do_begin_array(bool multimode);
   virtual ojobject do_begin_object(bool multimode);
@@ -172,13 +170,6 @@ void json_print(std::ostream & os, bool const& value)
   os << (value ? "true" : "false");
 }
 
-void json_print(std::ostream & os, std::string const& value)
-{
-  os << '"';
-  json_escape(os, value);
-  os << '"';
-}
-
 void ostream_ojnode::do_print_null()
 {
   if (CLEARED == state_) {
@@ -196,6 +187,19 @@ void ostream_ojnode::do_print_impl(T const& value)
   if (CLEARED == state_) {
     out_prefix();
     json_print(*os_, value);
+    out_suffix();
+  } else {
+    os_->setstate(std::ios_base::failbit);
+  }
+}
+
+void ostream_ojnode::do_print(string_iterator it, string_iterator end)
+{
+  if (CLEARED == state_) {
+    out_prefix();
+    *os_ << '"';
+    json_escape(*os_, it, end);
+    *os_ << '"';
     out_suffix();
   } else {
     os_->setstate(std::ios_base::failbit);
@@ -287,7 +291,7 @@ void ostream_ojnode::out_prefix()
   }
   if (prekey_) {
     *os_ << '"';
-    json_escape(*os_, *prekey_);
+    json_escape(*os_, prekey_->begin(), prekey_->end());
     *os_ << '"' << ':';
     prekey_ = "";
   }
