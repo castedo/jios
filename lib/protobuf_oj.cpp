@@ -72,7 +72,7 @@ void print_singular_field(ojvalue & oj,
       print_field(oj, pro, field, reflec, &Reflection::GetBool);
       break;
     case FieldDescriptor::CppType::CPPTYPE_MESSAGE:
-      print_proto_type(oj, reflec->GetMessage(pro, field));
+      oj.write(reflec->GetMessage(pro, field));
       break;
     case FieldDescriptor::CppType::CPPTYPE_UINT64:
     case FieldDescriptor::CppType::CPPTYPE_ENUM:
@@ -110,7 +110,7 @@ void print_repeated_field(ojvalue & oj,
       print_field(oj, pro, field, idx, reflec, &Reflection::GetRepeatedBool);
       break;
     case FieldDescriptor::CppType::CPPTYPE_MESSAGE:
-      print_proto_type(oj, reflec->GetRepeatedMessage(pro, field, idx));
+      oj.write(reflec->GetRepeatedMessage(pro, field, idx));
       break;
     case FieldDescriptor::CppType::CPPTYPE_UINT64:
     case FieldDescriptor::CppType::CPPTYPE_ENUM:
@@ -142,7 +142,7 @@ int print_count(protobuf::Message const& pro,
   return ret;
 }
 
-void print_proto_type(ojvalue & oj, protobuf::Message const& pro)
+void jios_write(ojvalue & oj, protobuf::Message const& pro)
 {
   Descriptor const* pd = pro.GetDescriptor();
   Reflection const* reflec = pro.GetReflection();
@@ -174,7 +174,7 @@ void print_proto_type(ojvalue & oj, protobuf::Message const& pro)
 
 void print_proto_type(ostream & os, protobuf::Message const& pro)
 {
-  print_proto_type(json_out(os).put(), pro);
+  json_out(os) << pro;
   os << endl;
 }
 
