@@ -3,7 +3,9 @@
 
 #include <memory>
 #include <tuple>
+#include <string>
 #include <sstream>
+#include <utility>
 #include <boost/noncopyable.hpp>
 #include <boost/optional.hpp>
 
@@ -14,34 +16,6 @@ namespace jios {
 
 class ojvalue;
 class ojsink;
-
-//! jios_write_string defines how a type is output as a JSON string,
-//! including JSON keys in addition to JSON string values.
-//! Default is to use ostream << (insertion) operator.
-
-template<typename T>
-void jios_write_string(std::ostream & os, T const& src) { os << src; }
-
-//! jios_write defines how a type is output as any JSON value.
-//! Default is to use jios_write_string to write a JSON string value.
-
-template<typename T>
-void jios_write(ojvalue & oj, T const& src);
-
-//! Other types can have special jios_write handling if they should not
-//! be serialized to JSON strings by default
-
-void jios_write(ojvalue & oj, bool src);
-void jios_write(ojvalue & oj, int64_t src);
-void jios_write(ojvalue & oj, double src);
-
-void jios_write(ojvalue & oj, int32_t src);
-void jios_write(ojvalue & oj, uint32_t src);
-void jios_write(ojvalue & oj, long src);
-void jios_write(ojvalue & oj, float src);
-
-template<typename T>
-void jios_write(boost::optional<T> const& ov);
 
 //! Base for streams of JSON-ish values
 
@@ -114,6 +88,39 @@ public:
   ojobject & operator << (void (*func)(ojobject &));
 };
 
+////////////////////////////////////////////////////////////////////
+// jios_write detection
+
+//! jios_write defines how a type is output as any JSON value.
+
+void jios_write(ojvalue & oj, std::nullptr_t);
+
+namespace detail {
+
+    struct found_tag {};
+
+    template<typename T, typename ReturnType = decltype(
+        jios_write(std::declval<ojvalue&>(), std::declval<T>())
+    )>
+    struct find_jios_write
+    {
+        typedef found_tag tag;
+        static_assert( std::is_void<ReturnType>::value,
+                       "jios_write return type should be void" );
+    };
+
+}
+
+template<typename T, typename Omitted = detail::found_tag>
+struct jios_write_exists
+  : std::false_type
+{};
+
+template<typename T>
+struct jios_write_exists<T, typename detail::find_jios_write<T>::tag>
+  : std::true_type
+{};
+
 // ojvalue
 
 class ojvalue
@@ -122,15 +129,27 @@ public:
   virtual ~ojvalue() {}
 
   void write_null() { do_print_null(); }
-
-  void write_string_value();
-
-  std::ostream & string_value() { return buf_; }
+  void write_bool(bool b) { do_print(b); }
+  void write_int(int64_t i) { do_print(i); }
+  void write_double(double d) { do_print(d); }
+  template<typename T> void write_string(T const& src);
 
   template<typename T>
-  void write(T const& src) { jios_write(*this, src); }
+  typename std::enable_if<jios_write_exists<T>::value, void>::type
+    write(T const& src)
+  {
+    jios_write(*this, src);
+  }
 
-  void print(std::string const& value) { this->write(value); }
+  //! if no jios_write exists, write type T as JSON string
+  template<typename T>
+  typename std::enable_if<!jios_write_exists<T>::value, void>::type
+    write(T const& src)
+  {
+    this->write_string(src);
+  }
+
+  DEPRECATED void print(std::string const& value) { this->write(value); }
 
   ojarray array(bool multimode = false)
   {
@@ -142,26 +161,12 @@ public:
      return do_begin_object(multimode);
   }
 
-  DEPRECATED ojarray begin_array(bool multimode = false)
-  {
-     return do_begin_array(multimode);
-  }
-
-  DEPRECATED ojobject begin_object(bool multimode = false)
-  {
-     return do_begin_object(multimode);
-  }
-
   void flush() { do_flush(); }
 
 protected:
   typedef std::istreambuf_iterator<char> string_iterator;
 
 private:
-  friend void jios_write(ojvalue & oj, bool src);
-  friend void jios_write(ojvalue & oj, int64_t src);
-  friend void jios_write(ojvalue & oj, double src);
-
   virtual void do_print_null() = 0;
   virtual void do_print(int64_t value) = 0;
   virtual void do_print(double value) = 0;
@@ -179,6 +184,7 @@ private:
 
   virtual void do_flush() = 0;
 
+  void write_string_value();
   std::stringstream buf_;
 };
 
@@ -209,35 +215,66 @@ inline ojvalue * ojarray::operator -> () { return pimpl_.get(); }
 template<typename T>
 ojvalue & ojobject::put(T const& key)
 {
-  jios_write_string(pimpl_->string_value(), key);
+  pimpl_->buf_ << key;
   pimpl_->set_key_with_string_value();
   return *pimpl_;
 }
 
 template<typename T>
-void jios_write(ojvalue & oj, T const& src)
+void ojvalue::write_string(T const& src)
 {
-  jios_write_string(oj.string_value(), src);
-  oj.write_string_value();
+  buf_ << src;
+  write_string_value();
 }
 
-inline
-void jios_write(ojvalue & oj, bool src)
+/////////////////////////////////////////////////////////////////
+/// jios_write definitions for fundamental types
+
+//! Other types can have special jios_write handling if they should not
+//! be serialized to JSON strings by default
+
+inline void jios_write(ojvalue & oj, std::nullptr_t)
 {
-  oj.do_print(src);
+  oj.write_null();
 }
 
-inline
-void jios_write(ojvalue & oj, int64_t src)
+template<typename T, typename Omitted = std::true_type>
+struct write_arithmetic
 {
-  oj.do_print(src);
-}
+  //! This is the fallback write for arithmetic types
+  static void write(ojvalue & oj, T const& src) { oj.write_string(src); }
+};
 
-inline
-void jios_write(ojvalue & oj, double src)
+template<>
+struct write_arithmetic<bool, std::true_type>
 {
-  oj.do_print(src);
-}
+  static void write(ojvalue & oj, bool src) { oj.write_bool(src); }
+};
+
+template<>
+struct write_arithmetic<char, std::true_type>
+{
+  static void write(ojvalue & oj, char src) { oj.write_string(src); }
+};
+
+template<typename T>
+struct write_arithmetic<T, typename std::is_floating_point<T>::type>
+{
+  static void write(ojvalue & oj, T src) { oj.write_double(src); }
+};
+
+template<typename T>
+struct write_arithmetic<T, typename std::is_integral<T>::type>
+{
+  static void write(ojvalue & oj, T src) { oj.write_int(src); }
+};
+
+template<typename T>
+typename std::enable_if<std::is_arithmetic<T>::value, void>::type
+  jios_write(ojvalue & oj, T src)
+{
+  write_arithmetic<T>::write(oj, src);
+};
 
 template<typename T>
 void jios_write(ojvalue & oj, boost::optional<T> const& ov)

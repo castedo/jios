@@ -11,8 +11,8 @@ using namespace jios;
 BOOST_AUTO_TEST_CASE( simple_stream_test )
 {
   ostringstream ss;
-  json_out(ss, '\n') << 1 << 2 << "three";
-  BOOST_CHECK_EQUAL( ss.str(), "1\n2\n\"three\"\n" );
+  json_out(ss, '\n') << 1 << 2.5 << '3' << "four";
+  BOOST_CHECK_EQUAL( ss.str(), "1\n2.5\n\"3\"\n\"four\"\n" );
 }
 
 BOOST_AUTO_TEST_CASE( simple_array_test )
@@ -22,15 +22,22 @@ BOOST_AUTO_TEST_CASE( simple_array_test )
   for (int i = 0; i < 3; ++i) {
     oja << i;
   }
-  oja.terminate();     
+  oja.terminate();
   BOOST_CHECK_EQUAL( ss.str(), "[0, 1, 2]" );
+}
+
+BOOST_AUTO_TEST_CASE( bool_test )
+{
+  ostringstream ss;
+  json_out(ss).put().array() << true << false << endj;
+  BOOST_CHECK_EQUAL( ss.str(), "[true, false]" );
 }
 
 BOOST_AUTO_TEST_CASE( simple_endj_test )
 {
   ostringstream ss;
-  json_out(ss).put().array() << 1 << 2 << 3 << endj;
-  BOOST_CHECK_EQUAL( ss.str(), "[1, 2, 3]" );
+  json_out(ss).put().array() << 1 << 2.5 << float(3.14) << endj;
+  BOOST_CHECK_EQUAL( ss.str(), "[1, 2.5, 3.14]" );
 }
 
 BOOST_AUTO_TEST_CASE( simple_object_test )
@@ -99,5 +106,23 @@ BOOST_AUTO_TEST_CASE( lined_json_test )
   BOOST_CHECK_EQUAL( ss.str(), "{\"A\":[\"B\",\"C\"]" );
   ojo.terminate();
   BOOST_CHECK_EQUAL( ss.str(), "{\"A\":[\"B\",\"C\"]}\n" );
+}
+
+struct some_base { int foo; };
+
+struct some_derived : some_base { int bar; };
+
+void jios_write(ojvalue & oj, some_base const& src)
+{
+  oj.write(src.foo + 1000);
+}
+
+BOOST_AUTO_TEST_CASE( custom_base_jios_write )
+{
+  some_derived thing;
+  thing.foo = 15;
+  ostringstream ss;
+  json_out(ss) << thing;
+  BOOST_CHECK_EQUAL( ss.str(), "1015" );
 }
 
