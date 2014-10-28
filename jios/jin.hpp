@@ -2,6 +2,8 @@
 #define JIOS_JIN_HPP
 
 #include <memory>
+#include <sstream>
+#include <boost/noncopyable.hpp>
 #include "jout.hpp"
 
 namespace jios {
@@ -95,6 +97,31 @@ public:
   template<typename T> ijobject & operator >> (T & dest);
 };
 
+////////////////////////////////////////////////////////////////////
+// jios_read detection
+
+namespace detail {
+    template<typename T, typename ReturnType = decltype(
+        jios_read(std::declval<ijvalue&>(), std::declval<T&>())
+    )>
+    struct find_jios_read
+    {
+        typedef found_tag tag;
+        static_assert( std::is_void<ReturnType>::value,
+                       "jios_read return type should be void" );
+    };
+}
+
+template<typename T, typename Omitted = detail::found_tag>
+struct jios_read_exists
+  : std::false_type
+{};
+
+template<typename T>
+struct jios_read_exists<T, typename detail::find_jios_read<T>::tag>
+  : std::true_type
+{};
+
 //! JSON-ish value
 
 enum class json_type {
@@ -116,7 +143,20 @@ public:
   void set_failbit() { do_set_failbit(); }
 
   template<typename T>
-  bool read(T & dest) { jios_read(*this, dest); return !fail(); }
+  typename std::enable_if<jios_read_exists<T>::value, bool>::type
+    read(T & dest)
+  {
+    jios_read(*this, dest);
+    return !fail();
+  }
+
+  template<typename T>
+  typename std::enable_if<!jios_read_exists<T>::value, bool>::type
+    read(T & dest)
+  {
+    read_string_value() >> dest;
+    return good_string_value_read();
+  }
 
   bool ignore();
 
@@ -159,6 +199,10 @@ private:
 
   void extraction_expiration_boundary();
   bool expired_; // extracted element read, another read triggers advance
+
+  std::istream & read_string_value();
+  bool good_string_value_read();
+  std::stringstream buf_;
 };
 
 class ijpair : public ijvalue

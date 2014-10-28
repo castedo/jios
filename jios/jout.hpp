@@ -96,7 +96,6 @@ public:
 void jios_write(ojvalue & oj, std::nullptr_t);
 
 namespace detail {
-
     struct found_tag {};
 
     template<typename T, typename ReturnType = decltype(
@@ -108,7 +107,6 @@ namespace detail {
         static_assert( std::is_void<ReturnType>::value,
                        "jios_write return type should be void" );
     };
-
 }
 
 template<typename T, typename Omitted = detail::found_tag>
@@ -238,42 +236,37 @@ inline void jios_write(ojvalue & oj, std::nullptr_t)
   oj.write_null();
 }
 
-template<typename T, typename Omitted = std::true_type>
-struct write_arithmetic
+template<typename T>
+typename std::enable_if<std::is_floating_point<T>::value, void>::type
+  jios_write(ojvalue & oj, T src)
 {
-  //! This is the fallback write for arithmetic types
-  static void write(ojvalue & oj, T const& src) { oj.write_string(src); }
+  oj.write_double(src);
+};
+
+template<typename T, typename Omitted = std::true_type>
+struct write_integral
+{
+  //! Default way to write integral type
+  static void write(ojvalue & oj, T src) { oj.write_int(src); }
 };
 
 template<>
-struct write_arithmetic<bool, std::true_type>
+struct write_integral<bool, std::true_type>
 {
   static void write(ojvalue & oj, bool src) { oj.write_bool(src); }
 };
 
 template<>
-struct write_arithmetic<char, std::true_type>
+struct write_integral<char, std::true_type>
 {
   static void write(ojvalue & oj, char src) { oj.write_string(src); }
 };
 
 template<typename T>
-struct write_arithmetic<T, typename std::is_floating_point<T>::type>
-{
-  static void write(ojvalue & oj, T src) { oj.write_double(src); }
-};
-
-template<typename T>
-struct write_arithmetic<T, typename std::is_integral<T>::type>
-{
-  static void write(ojvalue & oj, T src) { oj.write_int(src); }
-};
-
-template<typename T>
-typename std::enable_if<std::is_arithmetic<T>::value, void>::type
+typename std::enable_if<std::is_integral<T>::value, void>::type
   jios_write(ojvalue & oj, T src)
 {
-  write_arithmetic<T>::write(oj, src);
+  write_integral<T>::write(oj, src);
 };
 
 template<typename T>

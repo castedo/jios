@@ -33,6 +33,22 @@ Parsing Examples
   json_in(ss) >> i >> s >> j;
 ```
 
+
+### Use any type with the istream >> (extraction) operator defined
+
+```cpp
+  using namespace boost::posix_time;
+  istringstream ss("00:01:03");
+  time_duration t;
+  json_in(ss).get().array() >> t;
+  cout << boolalpha << bool(t == seconds(63)) << endl;
+```
+outputs
+```
+  true
+```
+
+
 Printing Examples
 -----------------
 

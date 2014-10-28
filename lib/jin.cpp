@@ -78,6 +78,25 @@ json_type ijvalue::type() const
   return do_type();
 }
 
+istream & ijvalue::read_string_value()
+{
+  extraction_expiration_boundary();
+  string sv;
+  do_parse(sv);
+  buf_.clear();
+  buf_.str(sv);
+  return buf_;
+}
+
+bool ijvalue::good_string_value_read()
+{
+  buf_ >> ws;
+  if (buf_.fail() || !buf_.eof()) {
+    set_failbit();
+  }
+  return !fail();
+}
+
 void jios_read(ijvalue & ij, bool & dest)
 {
   ij.extraction_expiration_boundary();
