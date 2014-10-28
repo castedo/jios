@@ -38,3 +38,14 @@ BOOST_AUTO_TEST_CASE( parse_bad_time_test )
   BOOST_CHECK( ss.fail() );
 }
 
+BOOST_AUTO_TEST_CASE( parse_list_test )
+{
+  istringstream ss("[1, 2, 3]");
+  list<int> a;
+  a.push_back(4);
+  json_in(ss) >> a;
+  list<int> expect = {1, 2, 3};
+  BOOST_CHECK_EQUAL( a.size(), expect.size() );
+  BOOST_CHECK( a == expect );
+}
+

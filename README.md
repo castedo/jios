@@ -49,6 +49,19 @@ outputs
   true true
 ```
 
+### Parse JSON arrays into standard containers
+
+```cpp
+  istringstream ss("[1, 2, 3]");
+  list<int> many;
+  json_in(ss) >> many;
+  list<int> expect = {1, 2, 3};
+  cout << boolalpha << bool(many == expect) << endl;
+outputs
+```
+  true
+```
+
 
 Printing Examples
 -----------------

@@ -360,7 +360,7 @@ void jios_write(ojvalue & oj, boost::optional<T> const& ov)
 template<class IterT>
 void jios_write(ojvalue & oj, boost::iterator_range<IterT> const& range)
 {
-  ojarray oja = oj.array();
+  ojarray oja = oj.array(true);
   for (auto it = range.begin(); it != range.end(); ++it) {
     oja << *it;
   }

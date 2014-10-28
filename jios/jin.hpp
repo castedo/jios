@@ -3,6 +3,11 @@
 
 #include <memory>
 #include <sstream>
+#include <vector>
+#include <list>
+#include <deque>
+#include <forward_list>
+#include <array>
 #include <boost/noncopyable.hpp>
 #include "jout.hpp"
 
@@ -258,6 +263,56 @@ inline ijobject & ijobject::operator >> (T & dest)
 inline bool ijstreamoid::hint_multiline() const
 { 
   return pimpl_->do_hint_multiline();
+}
+
+/////////////////////////////////////////////////////////////////
+/// more jios_read definitions for fundamental types
+
+template<class Container>
+void jios_read(ijvalue & ij, std::back_insert_iterator<Container> it)
+{
+  ijarray ija = ij.array();
+  while (!ija.at_end()) {
+    typename Container::value_type v;
+    ija >> v;
+    *it = v;
+    ++it;
+  }
+}
+
+template<class T>
+void jios_read(ijvalue & ij, std::vector<T> & container)
+{
+  container.clear();
+  jios::jios_read(ij, std::back_inserter(container));
+}
+
+template<class T>
+void jios_read(ijvalue & ij, std::list<T> & container)
+{
+  container.clear();
+  jios::jios_read(ij, std::back_inserter(container));
+}
+
+template<class T>
+void jios_read(ijvalue & ij, std::deque<T> & container)
+{
+  container.clear();
+  jios::jios_read(ij, std::back_inserter(container));
+}
+
+template<class T, std::size_t N>
+void jios_read(ijvalue & ij, std::array<T, N> & container)
+{
+  container.clear();
+  jios::jios_read(ij, std::back_inserter(container));
+}
+
+template<class T>
+void jios_read(ijvalue & ij, std::forward_list<T> & container)
+{
+  container.clear();
+  jios::jios_read(ij, std::back_inserter(container));
 }
 
 
