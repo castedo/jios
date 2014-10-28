@@ -38,14 +38,15 @@ Parsing Examples
 
 ```cpp
   using namespace boost::posix_time;
-  istringstream ss("00:01:03");
-  time_duration t;
-  json_in(ss).get().array() >> t;
-  cout << boolalpha << bool(t == seconds(63)) << endl;
+  istringstream ss("[\"00:01:03\", \"00:00:12\"]");
+  time_duration t1, t2;
+  json_in(ss).get().array() >> t1 >> t2;
+  cout << boolalpha << bool(t1 == seconds(63)) << ' '
+                    << bool(t2 == seconds(12)) << endl;
 ```
 outputs
 ```
-  true
+  true true
 ```
 
 

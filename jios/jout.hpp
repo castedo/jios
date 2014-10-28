@@ -6,8 +6,14 @@
 #include <string>
 #include <sstream>
 #include <utility>
+#include <vector>
+#include <list>
+#include <deque>
+#include <forward_list>
+#include <array>
 #include <boost/noncopyable.hpp>
 #include <boost/optional.hpp>
+#include <boost/range/iterator_range.hpp>
 
 #define DEPRECATED __attribute__((deprecated))
 
@@ -203,12 +209,53 @@ class ojsink
 void endj(ojstream & oj);
 void endj(ojobject & oj);
 
-////////////////////////////////////////
-/// inline method implementations
+//////////////////////////////////////////////////////////////////
+// ojstreamoid/ojstream/ojarray inline method implementations
+
+inline
+ojstreamoid & ojstreamoid::operator = (ojstreamoid && rhs)
+{
+  pimpl_ = std::move(rhs.pimpl_);
+  return *this;
+}
+
+inline
+void ojstreamoid::terminate()
+{
+  BOOST_ASSERT(pimpl_);
+  if (pimpl_) {
+    pimpl_->do_terminate();
+  }
+}
+
+inline
+ojvalue & ojstream::put()
+{
+  return *pimpl_;
+}
+
+template<typename T>
+ojstream & ojstream::operator << (T const& src)
+{
+  if (pimpl_) {
+    pimpl_->write(src);
+  }
+  return *this;
+}
+
+inline
+ojstream & ojstream::operator << (void (*func)(ojstream &))
+{
+  (*func)(*this);
+  return *this;
+}
 
 inline ojvalue & ojarray::operator * () { return *pimpl_; }
 
 inline ojvalue * ojarray::operator -> () { return pimpl_.get(); }
+
+//////////////////////////////////////////////////
+// ojobject inline/template method implementations
 
 template<typename T>
 ojvalue & ojobject::put(T const& key)
@@ -217,6 +264,36 @@ ojvalue & ojobject::put(T const& key)
   pimpl_->set_key_with_string_value();
   return *pimpl_;
 }
+
+template<typename KeyT, typename ValT>
+ojobject & ojobject::operator << (std::tuple<KeyT, ValT> const& src)
+{
+  if (pimpl_) {
+    ojvalue & oj = this->put(std::get<0>(src));
+    oj.write(std::get<1>(src));
+  }
+  return *this;
+}
+
+template<typename KeyT, typename ValT>
+ojobject & ojobject::operator << (std::pair<KeyT, ValT> const& src)
+{
+  if (pimpl_) {
+    ojvalue & oj = this->put(std::get<0>(src));
+    oj.write(std::get<1>(src));
+  }
+  return *this;
+}
+
+inline
+ojobject & ojobject::operator << (void (*func)(ojobject &))
+{
+  (*func)(*this);
+  return *this;
+}
+
+//////////////////////////////////////////////////
+// ojvalue inline/template method implementations
 
 template<typename T>
 void ojvalue::write_string(T const& src)
@@ -280,69 +357,44 @@ void jios_write(ojvalue & oj, boost::optional<T> const& ov)
   }
 }
 
-inline
-ojstreamoid & ojstreamoid::operator = (ojstreamoid && rhs)
+template<class IterT>
+void jios_write(ojvalue & oj, boost::iterator_range<IterT> const& range)
 {
-  pimpl_ = std::move(rhs.pimpl_);
-  return *this;
-}
-
-inline
-void ojstreamoid::terminate()
-{
-  BOOST_ASSERT(pimpl_);
-  if (pimpl_) {
-    pimpl_->do_terminate();
+  ojarray oja = oj.array();
+  for (auto it = range.begin(); it != range.end(); ++it) {
+    oja << *it;
   }
+  oja.terminate();
 }
 
-inline
-ojvalue & ojstream::put()
+template<class T>
+void jios_write(ojvalue & oj, std::vector<T> const& cont)
 {
-  return *pimpl_;
+  jios::jios_write(oj, boost::make_iterator_range(cont));
 }
 
-template<typename T>
-ojstream & ojstream::operator << (T const& src)
+template<class T>
+void jios_write(ojvalue & oj, std::list<T> const& cont)
 {
-  if (pimpl_) {
-    pimpl_->write(src);
-  }
-  return *this;
+  jios::jios_write(oj, boost::make_iterator_range(cont));
 }
 
-inline
-ojstream & ojstream::operator << (void (*func)(ojstream &))
+template<class T>
+void jios_write(ojvalue & oj, std::deque<T> const& cont)
 {
-  (*func)(*this);
-  return *this;
+  jios::jios_write(oj, boost::make_iterator_range(cont));
 }
 
-template<typename KeyT, typename ValT>
-ojobject & ojobject::operator << (std::tuple<KeyT, ValT> const& src)
+template<class T, std::size_t N>
+void jios_write(ojvalue & oj, std::array<T, N> const& cont)
 {
-  if (pimpl_) {
-    ojvalue & oj = this->put(std::get<0>(src));
-    oj.write(std::get<1>(src));
-  }
-  return *this;
+  jios::jios_write(oj, boost::make_iterator_range(cont));
 }
 
-template<typename KeyT, typename ValT>
-ojobject & ojobject::operator << (std::pair<KeyT, ValT> const& src)
+template<class T>
+void jios_write(ojvalue & oj, std::forward_list<T> const& cont)
 {
-  if (pimpl_) {
-    ojvalue & oj = this->put(std::get<0>(src));
-    oj.write(std::get<1>(src));
-  }
-  return *this;
-}
-
-inline
-ojobject & ojobject::operator << (void (*func)(ojobject &))
-{
-  (*func)(*this);
-  return *this;
+  jios::jios_write(oj, boost::make_iterator_range(cont));
 }
 
 
