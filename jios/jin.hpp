@@ -8,6 +8,7 @@
 #include <deque>
 #include <forward_list>
 #include <array>
+#include <tuple>
 #include <boost/noncopyable.hpp>
 #include "jout.hpp"
 
@@ -99,7 +100,10 @@ public:
 
   std::string key();
 
-  template<typename T> ijobject & operator >> (T & dest);
+  template<typename T>
+  ijobject & operator >> (std::tuple<std::string &, T &> const& dest);
+
+  template<typename T> DEPRECATED ijobject & operator >> (T & dest);
 };
 
 ////////////////////////////////////////////////////////////////////
@@ -257,6 +261,15 @@ template<typename T>
 inline ijobject & ijobject::operator >> (T & dest)
 {
   pimpl_->read(dest);
+  return *this;
+}
+
+template<typename T>
+ijobject & ijobject::operator >> (std::tuple<std::string &, T &> const& dest)
+{
+  ijpair & kval = this->get();
+  std::get<0>(dest) = kval.key();
+  kval.read(std::get<1>(dest));
   return *this;
 }
 

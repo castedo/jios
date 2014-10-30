@@ -49,3 +49,25 @@ BOOST_AUTO_TEST_CASE( parse_list_test )
   BOOST_CHECK( a == expect );
 }
 
+BOOST_AUTO_TEST_CASE( parse_tie_test )
+{
+  stringstream ss;
+  ss << R"( { "Joe":35, "Jane":33 } )";
+
+  string name1, name2;
+  int age1, age2;
+
+  json_in(ss).get().object() >> tie(name1, age1)
+                             >> tie(name2, age2);
+
+  BOOST_CHECK_EQUAL( name1, "Joe" ); 
+  BOOST_CHECK_EQUAL( name2, "Jane" ); 
+  BOOST_CHECK_EQUAL( age1, 35 ); 
+  BOOST_CHECK_EQUAL( age2, 33 ); 
+
+  stringstream out;
+  out << name1 << " is " << age1 - age2 << " years older than "
+      << name2 << endl;
+  BOOST_CHECK_EQUAL( out.str(), "Joe is 2 years older than Jane\n");
+}
+

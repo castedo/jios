@@ -64,7 +64,7 @@ public:
     MemberT & data = dest_.*mptr;
     if (!key_found_ && ijo_.key() == key) {
       key_found_ = true;
-      ijo_ >> data;
+      ijo_.get().read(data);
     }
     return *this;
   } 

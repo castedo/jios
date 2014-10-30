@@ -62,6 +62,23 @@ outputs
   true
 ```
 
+### Parse JSON object as stream of name value pairs
+
+```cpp
+  stringstream ss;
+  ss << R"( { "Joe":35, "Jane":33 } )";
+  string name1, name2;
+  int age1, age2;
+  json_in(ss).get().object() >> tie(name1, age1)
+                             >> tie(name2, age2);
+  cout << name1 << " is " << age1 - age2 << " years older than "
+       << name2 << endl;
+```
+outputs
+```
+  Joe is 2 years older than Jane 
+```
+
 
 Printing Examples
 -----------------

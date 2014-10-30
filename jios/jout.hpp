@@ -153,8 +153,6 @@ public:
     this->write_string(src);
   }
 
-  DEPRECATED void print(std::string const& value) { this->write(value); }
-
   ojarray array(bool multimode = false)
   {
      return do_begin_array(multimode);
