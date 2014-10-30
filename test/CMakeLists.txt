@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 2.8.1)
 add_executable(jios-test
     jin_test.cpp
     jout_test.cpp
+    express_test.cpp
     test.cpp
     assertion_failed.cpp
 )
