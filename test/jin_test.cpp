@@ -101,3 +101,16 @@ BOOST_AUTO_TEST_CASE( parse_tie_test )
   BOOST_CHECK_EQUAL( out.str(), "Joe is 2 years older than Jane\n");
 }
 
+BOOST_AUTO_TEST_CASE( parse_keys_as_int_test )
+{
+  stringstream ss;
+  ss << R"( { "1":1, "2":4, "3":9 } )";
+
+  ijobject ijo = json_in(ss).get().object();
+  while (!ijo.at_end()) {
+    int key, value;
+    ijo >> tie(key, value);
+    BOOST_CHECK_EQUAL( key*key, value );
+  }
+}
+

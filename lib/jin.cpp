@@ -97,6 +97,13 @@ istream & ijvalue::read_string_value()
   return buf_;
 }
 
+istream & ijpair::read_key_value() const
+{
+  buf_.clear();
+  buf_.str(do_key());
+  return buf_;
+}
+
 bool ijvalue::good_string_value_read()
 {
   buf_ >> ws;

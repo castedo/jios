@@ -47,6 +47,12 @@ public:
   void read(ijvalue & ij, T & dest)
   {
     dest = T();
+    merge(ij, dest);
+  }
+
+  static
+  void merge(ijvalue & ij, T & dest)
+  {
     jobject_reader<T> reader(ij.object(), dest);
     while (!reader.ijo_.at_end() && !reader.ijo_.fail()) {
       Expresser::jios_express(reader);

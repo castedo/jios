@@ -125,8 +125,8 @@ public:
 
   std::string key();
 
-  template<typename T>
-  ijobject & operator >> (std::tuple<std::string &, T &> const& dest);
+  template<typename KeyT, typename ValT>
+  ijobject & operator >> (std::tuple<KeyT &, ValT &> const& dest);
 
   typedef basic_iterator<ijpair &> iterator;
 
@@ -213,6 +213,7 @@ protected:
 
 private:
   friend class ijstreamoid;
+  friend class ijpair;
 
   friend void jios_read(ijvalue & ij, bool & dest);
   friend void jios_read(ijvalue & ij, std::string & dest);
@@ -241,7 +242,7 @@ private:
 
   std::istream & read_string_value();
   bool good_string_value_read();
-  std::stringstream buf_;
+  mutable std::stringstream buf_;
 };
 
 class ijpair : public ijvalue
@@ -249,11 +250,18 @@ class ijpair : public ijvalue
 public:
   std::string key() const;
 
+  bool parse_key(std::string & dest) const;
+
+  template<class T>
+  bool parse_key(T & dest) const;
+
   template<class Map>
   bool read_to_map(Map & m) { return this->read(m[this->key()]); }
 
 private:
   friend class ijobject;
+
+  std::istream & read_key_value() const;
 
   virtual std::string do_key() const = 0;
 };
@@ -294,12 +302,15 @@ inline ijobject & ijobject::operator >> (T & dest)
   return *this;
 }
 
-template<typename T>
-ijobject & ijobject::operator >> (std::tuple<std::string &, T &> const& dest)
+template<typename KeyT, typename ValT>
+ijobject & ijobject::operator >> (std::tuple<KeyT &, ValT &> const& dest)
 {
   ijpair & kval = this->get();
-  std::get<0>(dest) = kval.key();
-  kval.read(std::get<1>(dest));
+  if (kval.parse_key(std::get<0>(dest))) {
+    kval.read(std::get<1>(dest));
+  } else {
+    set_failbit();
+  }
   return *this;
 }
 
@@ -308,6 +319,18 @@ inline bool ijstreamoid::hint_multiline() const
   return pimpl_->do_hint_multiline();
 }
 
+inline bool ijpair::parse_key(std::string & dest) const
+{
+  dest = this->key();
+  return true;
+}
+
+template<class T>
+bool ijpair::parse_key(T & dest) const
+{
+  read_key_value() >> dest;
+  return !buf_.fail();
+}
 
 /////////////////////////////////////////////////////////////////
 /// more jios_read definitions for fundamental types
