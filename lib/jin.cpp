@@ -49,7 +49,7 @@ ijpair const& ijobject::peek()
 string ijobject::key()
 {
   BOOST_VERIFY(!this->at_end());
-  return pimpl_->do_key();
+  return pimpl_->key();
 }
 
 string ijpair::key() const
@@ -90,10 +90,9 @@ json_type ijvalue::type() const
 istream & ijvalue::read_string_value()
 {
   extraction_expiration_boundary();
-  string sv;
-  do_parse(sv);
   buf_.clear();
-  buf_.str(sv);
+  buf_.str(string());
+  do_parse(ostreambuf_iterator<char>(buf_));
   return buf_;
 }
 
@@ -262,6 +261,7 @@ public:
   void do_parse(double & dest) override { debug(); }
   void do_parse(bool & dest) override { debug(); }
   void do_parse(string & dest) override { debug(); }
+  void do_parse(buffer_iterator) override { debug(); }
   ijarray do_begin_array() override {
     debug();
     return ijarray(shared_from_this());

@@ -102,6 +102,9 @@ private:
   void do_parse(double & dest) override;
   void do_parse(bool & dest) override;
   void do_parse(string & dest) override;
+  void do_parse(buffer_iterator dest) override;
+
+  pair<const char *, size_t> do_string();
 
   ijarray do_begin_array() override;
   ijobject do_begin_object() override;
@@ -450,26 +453,35 @@ void jsonc_ijnode::do_parse(bool & dest)
 
 void jsonc_ijnode::do_parse(string & dest)
 {
-  if (!p_node_) {
-    set_failbit();
-    return;
-  }
+  auto p = do_string();
+  dest.assign(p.first, p.first + p.second);
+}
+
+void jsonc_ijnode::do_parse(buffer_iterator dest)
+{
+  auto p = do_string();
+  copy(p.first, p.first + p.second, dest);
+}
+
+pair<const char *, size_t> jsonc_ijnode::do_string()
+{
+  const char * p = "";
   switch (json_object_get_type(p_node_)) {
     case json_type_string:
       {
         size_t len = json_object_get_string_len(p_node_);
-        dest.resize(len);
-        copy_n(json_object_get_string(p_node_), len, dest.begin());
+        p = json_object_get_string(p_node_);
+        return make_pair(p, len);
       }
       break;
     case json_type_int:
-      dest = json_object_to_json_string(p_node_);
+      p = json_object_to_json_string(p_node_);
       break;
     case json_type_double:
-      dest = json_object_to_json_string(p_node_);
+      p = json_object_to_json_string(p_node_);
       break;
     case json_type_boolean:
-      dest = json_object_to_json_string(p_node_);
+      p = json_object_to_json_string(p_node_);
       break;
     case json_type_null:
     case json_type_array:
@@ -477,6 +489,7 @@ void jsonc_ijnode::do_parse(string & dest)
       set_failbit();
       break;
   }
+  return make_pair(p, ::strlen(p));
 }
 
 ijarray jsonc_ijnode::do_begin_array()

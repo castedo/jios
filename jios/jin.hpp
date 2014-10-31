@@ -132,8 +132,6 @@ public:
 
   iterator begin() { return iterator(pimpl_.get()); }
   iterator end() { return iterator(); }
-
-  template<typename T> DEPRECATED ijobject & operator >> (T & dest);
 };
 
 ////////////////////////////////////////////////////////////////////
@@ -211,6 +209,8 @@ public:
 protected:
   ijvalue() : expired_(false) {}
 
+  typedef std::ostreambuf_iterator<char> buffer_iterator;
+
 private:
   friend class ijstreamoid;
   friend class ijpair;
@@ -229,6 +229,7 @@ private:
   virtual void do_parse(double & dest) = 0;
   virtual void do_parse(bool & dest) = 0;
   virtual void do_parse(std::string & dest) = 0;
+  virtual void do_parse(buffer_iterator dest) = 0;
 
   virtual ijarray do_begin_array() = 0;
   virtual ijobject do_begin_object() = 0;
@@ -290,13 +291,6 @@ inline void ijstreamoid::set_failbit()
 
 template<typename T>
 inline ijstream & ijstream::operator >> (T & dest)
-{
-  pimpl_->read(dest);
-  return *this;
-}
-
-template<typename T>
-inline ijobject & ijobject::operator >> (T & dest)
 {
   pimpl_->read(dest);
   return *this;
