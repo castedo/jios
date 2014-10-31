@@ -59,7 +59,7 @@ string ijpair::key() const
 
 void ijvalue::extraction_expiration_boundary()
 {
-//  BOOST_ASSERT(!expired_);
+  BOOST_ASSERT(!expired_);
   if (expired_) { do_advance(); }
   expired_ = true;
 }
@@ -248,13 +248,13 @@ class null_ijsource
   , public enable_shared_from_this<null_ijsource>
 {
   void debug() const {
-    //TODO: BOOST_ASSERT_MSG(false, "null_ijsource accessed");
+    BOOST_ASSERT_MSG(false, "null_ijsource accessed");
   } 
 
 public:
   null_ijsource() {}
 
-  bool do_get_failbit() const override { debug(); return true; }
+  bool do_get_failbit() const override { return true; }
   void do_set_failbit() override { debug(); }
   json_type do_type() const override { debug(); return json_type::jnull; }
   void do_parse(int64_t & dest) override { debug(); }
@@ -273,7 +273,7 @@ public:
   bool do_hint_multiline() const override { debug(); return false; }
   void do_advance() override { debug(); }
   bool do_ready() override { debug(); return false; }
-  bool do_is_terminator() override { debug(); return true; }
+  bool do_is_terminator() override { return true; }
   string do_key() const override { debug(); return string(); }
 };
 

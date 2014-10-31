@@ -293,6 +293,7 @@ template<typename T>
 inline ijstream & ijstream::operator >> (T & dest)
 {
   pimpl_->read(dest);
+  this->advance();
   return *this;
 }
 
@@ -302,6 +303,7 @@ ijobject & ijobject::operator >> (std::tuple<KeyT &, ValT &> const& dest)
   ijpair & kval = this->get();
   if (kval.parse_key(std::get<0>(dest))) {
     kval.read(std::get<1>(dest));
+    this->advance();
   } else {
     set_failbit();
   }
