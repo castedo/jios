@@ -10,6 +10,7 @@
 #include <array>
 #include <tuple>
 #include <boost/noncopyable.hpp>
+#include <boost/iterator/iterator_adaptor.hpp>
 #include "jout.hpp"
 
 namespace jios {
@@ -71,6 +72,27 @@ public:
   ijvalue const& peek();
 
   template<typename T> ijstream & operator >> (T & dest);
+
+  class iterator
+    : public boost::iterator_adaptor<iterator,
+                                     ijsource *,
+                                     ijvalue &,
+                                     boost::single_pass_traversal_tag,
+                                     ijvalue &>
+  {
+  public:
+    iterator() : iterator::iterator_adaptor_(nullptr) {}
+    iterator(iterator const& rhs) : iterator::iterator_adaptor_(rhs) {}
+    iterator(ijsource * p) : iterator::iterator_adaptor_(p) {}
+
+  private:
+    friend class boost::iterator_core_access;
+    void increment();
+    ijvalue & dereference() const;
+  };
+
+  iterator begin() { return iterator(pimpl_.get()); }
+  iterator end() { return iterator(); }
 };
 
 //! JSON-ish array
@@ -183,6 +205,7 @@ protected:
 
 private:
   friend class ijstreamoid;
+  friend class ijstream::iterator;
 
   friend void jios_read(ijvalue & ij, bool & dest);
   friend void jios_read(ijvalue & ij, std::string & dest);
@@ -257,6 +280,11 @@ inline ijstream & ijstream::operator >> (T & dest)
   return *this;
 }
 
+inline ijvalue & ijstream::iterator::dereference() const
+{
+  return *(this->base_reference());
+}
+
 template<typename T>
 inline ijobject & ijobject::operator >> (T & dest)
 {
@@ -277,6 +305,7 @@ inline bool ijstreamoid::hint_multiline() const
 { 
   return pimpl_->do_hint_multiline();
 }
+
 
 /////////////////////////////////////////////////////////////////
 /// more jios_read definitions for fundamental types

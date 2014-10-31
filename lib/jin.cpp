@@ -25,6 +25,16 @@ ijvalue const& ijstream::peek()
   return *pimpl_;
 }
 
+void ijstream::iterator::increment()
+{
+  ijsource * & p_src = this->base_reference();
+  p_src->do_advance();
+  p_src->expired_ = false;
+  if (p_src->do_is_terminator() || p_src->fail()) {
+    p_src = nullptr;
+  }
+}
+
 ijpair & ijobject::get()
 {
   BOOST_VERIFY(!this->at_end());

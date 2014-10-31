@@ -62,6 +62,24 @@ outputs
   true
 ```
 
+### Iterate on JSON streams and arrays
+
+```cpp
+  istringstream ss("1 2 3 4 5");
+  int sum = 0;
+  for (ijvalue & v : json_in(ss)) {
+    int i;
+    if (v.read(i)) {
+      sum += i;
+    }
+  }
+  cout << sum << endl;
+```
+outputs
+```
+  15
+```
+
 ### Parse JSON object as stream of name value pairs
 
 ```cpp

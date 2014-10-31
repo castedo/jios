@@ -18,6 +18,20 @@ BOOST_AUTO_TEST_CASE( simple_jin_test )
   BOOST_CHECK( ss.eof() );
 }
 
+BOOST_AUTO_TEST_CASE( jin_for_loop_test )
+{
+  istringstream ss("1 2 3 4 5");
+  int sum = 0;
+  for (ijvalue & v : json_in(ss)) {
+    int i;
+    if (v.read(i)) {
+      sum += i;
+    }
+  }
+  BOOST_CHECK( !ss.fail() );
+  BOOST_CHECK_EQUAL( sum, 15 );
+}
+
 BOOST_AUTO_TEST_CASE( parse_time_test )
 {
   istringstream ss(R"(["00:00:03", "00:00:02", "00:00:01"])");
