@@ -80,6 +80,26 @@ outputs
   15
 ```
 
+### Iterate by name value pair on JSON objects
+
+```cpp
+  stringstream ss;
+  ss << R"( { "a":1, "b":2, "c":3 } )";
+  int sum = 0;
+  for (ijpair & nv : json_in(ss).get().object()) {
+    int i;
+    if (nv.read(i)) {
+      sum += i;
+    }
+  }
+  cout << sum << endl;
+```
+outputs
+```
+  6
+```
+
+
 ### Parse JSON object as stream of name value pairs
 
 ```cpp

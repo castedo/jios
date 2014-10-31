@@ -32,6 +32,22 @@ BOOST_AUTO_TEST_CASE( jin_for_loop_test )
   BOOST_CHECK_EQUAL( sum, 15 );
 }
 
+BOOST_AUTO_TEST_CASE( jin_for_loop_object_test )
+{
+  stringstream ss;
+  ss << R"( { "a":1, "bc":2, "def":3 } )";
+  int sum = 0;
+  for (ijpair & nv : json_in(ss).get().object()) {
+    int i;
+    if (nv.read(i)) {
+      sum += i;
+    }
+    BOOST_CHECK_EQUAL( nv.key().size(), i );
+  }
+  BOOST_CHECK( !ss.fail() );
+  BOOST_CHECK_EQUAL( sum, 6 );
+}
+
 BOOST_AUTO_TEST_CASE( parse_time_test )
 {
   istringstream ss(R"(["00:00:03", "00:00:02", "00:00:01"])");

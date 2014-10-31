@@ -56,6 +56,25 @@ public:
   bool hint_multiline() const;
 
 protected:
+  template<class Reference>
+  class basic_iterator
+    : public boost::iterator_adaptor<basic_iterator<Reference>,
+                                     ijsource *,
+                                     Reference,
+                                     boost::single_pass_traversal_tag,
+                                     Reference>
+  {
+  public:
+    basic_iterator() : basic_iterator::iterator_adaptor_(nullptr) {}
+    basic_iterator(ijsource * p) : basic_iterator::iterator_adaptor_(p) {}
+  private:
+    friend class boost::iterator_core_access;
+    void increment() { ijstreamoid::increment(this->base_reference()); }
+    Reference dereference() const { return *(this->base_reference()); }
+  };
+
+  static void increment(ijsource * & p_src);
+
   std::shared_ptr<ijsource> pimpl_;
 };
 
@@ -73,23 +92,7 @@ public:
 
   template<typename T> ijstream & operator >> (T & dest);
 
-  class iterator
-    : public boost::iterator_adaptor<iterator,
-                                     ijsource *,
-                                     ijvalue &,
-                                     boost::single_pass_traversal_tag,
-                                     ijvalue &>
-  {
-  public:
-    iterator() : iterator::iterator_adaptor_(nullptr) {}
-    iterator(iterator const& rhs) : iterator::iterator_adaptor_(rhs) {}
-    iterator(ijsource * p) : iterator::iterator_adaptor_(p) {}
-
-  private:
-    friend class boost::iterator_core_access;
-    void increment();
-    ijvalue & dereference() const;
-  };
+  typedef basic_iterator<ijvalue &> iterator;
 
   iterator begin() { return iterator(pimpl_.get()); }
   iterator end() { return iterator(); }
@@ -124,6 +127,11 @@ public:
 
   template<typename T>
   ijobject & operator >> (std::tuple<std::string &, T &> const& dest);
+
+  typedef basic_iterator<ijpair &> iterator;
+
+  iterator begin() { return iterator(pimpl_.get()); }
+  iterator end() { return iterator(); }
 
   template<typename T> DEPRECATED ijobject & operator >> (T & dest);
 };
@@ -205,7 +213,6 @@ protected:
 
 private:
   friend class ijstreamoid;
-  friend class ijstream::iterator;
 
   friend void jios_read(ijvalue & ij, bool & dest);
   friend void jios_read(ijvalue & ij, std::string & dest);
@@ -278,11 +285,6 @@ inline ijstream & ijstream::operator >> (T & dest)
 {
   pimpl_->read(dest);
   return *this;
-}
-
-inline ijvalue & ijstream::iterator::dereference() const
-{
-  return *(this->base_reference());
 }
 
 template<typename T>
