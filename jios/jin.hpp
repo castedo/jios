@@ -195,8 +195,6 @@ public:
     return good_string_value_read();
   }
 
-  bool ignore();
-
   ijarray array();
   ijobject object();
 

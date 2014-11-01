@@ -9,11 +9,10 @@
 namespace jios {
 
 
-//! For compile-time type inspection and testing only
-
 template<class T>
 struct jobject_expression_prototype
 {
+  //! For compile-time type inspection and testing
   template<typename MemberT>
   jobject_expression_prototype & member(std::string const&, MemberT T::*mptr)
   {
@@ -48,7 +47,6 @@ template<typename T>
 struct is_jobject_expressible<T, typename detail::jobject_jios_express<T>::tag>
   : std::true_type
 {};
-
 
 //! JSON object expressing classes
 

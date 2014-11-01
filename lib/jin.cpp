@@ -64,12 +64,6 @@ void ijvalue::extraction_expiration_boundary()
   expired_ = true;
 }
 
-bool ijvalue::ignore()
-{
-  extraction_expiration_boundary();
-  return !fail();
-}
-
 ijarray ijvalue::array()
 {
   extraction_expiration_boundary();
@@ -205,7 +199,6 @@ void jios_read(ijvalue & src, ojvalue & dest)
 {
   switch (src.type()) {
     case json_type::jnull:
-      src.ignore();
       dest.write_null();
       break;
     case json_type::jbool:
