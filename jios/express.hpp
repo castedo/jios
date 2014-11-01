@@ -4,15 +4,88 @@
 #include "jin.hpp"
 #include "jout.hpp"
 
+#include <utility>
+
 namespace jios {
+
+
+//! For compile-time type inspection and testing only
+
+template<class T>
+struct jobject_expression_prototype
+{
+  template<typename MemberT>
+  jobject_expression_prototype & member(std::string const&, MemberT T::*mptr)
+  {
+    T * p_dest = nullptr;
+    MemberT & data = p_dest->*mptr;
+    boost::ignore_unused_variable_warning(data);
+    return *this;
+  }
+};
+
+////////////////////////////////////////////////////////////////////
+// jios_express detection
+
+namespace detail {
+    template<typename T, typename ReturnType = decltype(
+        T::jios_express(std::declval<jobject_expression_prototype<T>&>())
+    )>
+    struct jobject_jios_express
+    {
+        typedef found_tag tag;
+        static_assert( std::is_void<ReturnType>::value,
+                       "jios_express return type should be void" );
+    };
+}
+
+template<typename T, typename Omitted = detail::found_tag>
+struct is_jobject_expressible
+  : std::false_type
+{};
+
+template<typename T>
+struct is_jobject_expressible<T, typename detail::jobject_jios_express<T>::tag>
+  : std::true_type
+{};
 
 
 //! JSON object expressing classes
 
-template<class T, class Expresser = T>
-class jobject_writer
+template<class T, typename Omitted = std::true_type>
+struct jobject_clearer
 {
 public:
+  static void clear(T & dest) { dest = T(); }
+};
+
+template<class T>
+struct jobject_clearer<T, typename is_jobject_expressible<T>::type>
+{
+  static
+  void clear(T & dest)
+  {
+    jobject_clearer clearer(dest);
+    T::jios_express(clearer);
+  }
+
+  template<typename MemberT>
+  jobject_clearer & member(std::string const& key, MemberT T::*mptr)
+  {
+    MemberT & data = dest_.*mptr;
+    jobject_clearer<MemberT>::clear(data);
+    return *this;
+  }
+
+private:
+  jobject_clearer(T & dest) : dest_(dest) {}
+
+  T & dest_;
+};
+
+template<class T, class Expresser = T>
+struct jobject_writer
+{
   static
   void write(ojvalue & oj, T const& src)
   {
@@ -40,13 +113,12 @@ private:
 };
 
 template<class T, class Expresser = T>
-class jobject_reader
+struct jobject_reader
 {
-public:
   static
   void read(ijvalue & ij, T & dest)
   {
-    dest = T();
+    jobject_clearer<T>::clear(dest);
     merge(ij, dest);
   }
 
