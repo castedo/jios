@@ -178,10 +178,9 @@ class ijstate
 public:
   virtual ~ijstate() {}
 
-  bool fail() const { return do_get_failbit(); }
-  void set_failbit() { do_set_failbit(); }
-
 private:
+  friend ijvalue;
+  friend ijsource;
   friend ijstreamoid;
 
   virtual bool do_get_failbit() const = 0;
@@ -189,9 +188,12 @@ private:
 };
 
 class ijvalue
-  : public virtual ijstate
+  : private virtual ijstate
 {
 public:
+  bool fail() const { return do_state().do_get_failbit(); }
+  void set_failbit() { do_state().do_set_failbit(); }
+
   template<typename T>
   typename std::enable_if<jios_read_exists<T>::value, bool>::type
     read(T & dest)
@@ -228,6 +230,9 @@ private:
   friend void jios_read(ijvalue & ij, std::string & dest);
   friend void jios_read(ijvalue & ij, int64_t & dest);
   friend void jios_read(ijvalue & ij, double & dest);
+
+  virtual ijstate & do_state() { return *this; }
+  virtual ijstate const& do_state() const { return *this; }
 
   virtual json_type do_type() const = 0;
 
@@ -270,11 +275,14 @@ private:
 };
 
 class ijsource
-  : public virtual ijstate
+  : private virtual ijstate
 {
   friend class ijstreamoid;
   friend class ijstream;
   friend class ijobject;
+
+  virtual ijstate & do_state() { return *this; }
+  virtual ijstate const& do_state() const { return *this; }
 
   virtual ijpair & do_ref() = 0;
   virtual ijpair const& do_peek() = 0;
@@ -282,6 +290,8 @@ class ijsource
   virtual bool do_is_terminator() = 0;
   virtual void do_advance() = 0;
   virtual bool do_hint_multiline() const { return false; }
+
+  bool is_terminator_or_failed();
 
 protected:
   virtual bool do_ready() = 0;

@@ -29,9 +29,14 @@ void ijstreamoid::increment(ijsource * & p_src)
 {
   p_src->do_advance();
   p_src->do_ref().expired_ = false;
-  if (p_src->do_is_terminator() || p_src->fail()) {
+  if (p_src->is_terminator_or_failed()) {
     p_src = nullptr;
   }
+}
+
+bool ijsource::is_terminator_or_failed()
+{
+  return do_is_terminator() || do_state().do_get_failbit();
 }
 
 ijpair & ijobject::get()
@@ -132,7 +137,7 @@ void jios_read(ijvalue & ij, double & dest)
 bool ijstreamoid::at_end()
 {
   if (pimpl_->do_peek().expired_) { advance(); }
-  return pimpl_->do_is_terminator() || pimpl_->fail();
+  return pimpl_->is_terminator_or_failed();
 }
 
 template<typename T>
