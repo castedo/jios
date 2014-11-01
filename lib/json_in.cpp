@@ -11,20 +11,7 @@ using namespace std;
 namespace jios {
 
 
-//! interface to sharable iostream-like error state
-
-class jin_state : boost::noncopyable
-{
-public:
-  bool fail() const { return this->do_get_failbit(); }
-  void set_failbit() { this->do_set_failbit(); }
-
-private:
-  virtual bool do_get_failbit() const = 0;
-  virtual void do_set_failbit() = 0;
-};
-
-class istream_jin_state : public jin_state
+class istream_jin_state : public ijstate
 {
 public:
   istream_jin_state(shared_ptr<istream> const& p_is) : p_is_(p_is) {}
@@ -101,6 +88,9 @@ public:
   {}
 
 private:
+  ijstate & do_state() override { return ijpair::do_state(); }
+  ijstate const& do_state() const override { return ijpair::do_state(); }
+
   ijpair & do_ref() override { return *this; }
   ijpair const& do_peek() override { return *this; }
 

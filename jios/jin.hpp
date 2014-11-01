@@ -178,6 +178,9 @@ class ijstate
 public:
   virtual ~ijstate() {}
 
+  bool fail() const { return do_get_failbit(); }
+  void set_failbit() { do_set_failbit(); }
+
 private:
   friend ijvalue;
   friend ijsource;
@@ -188,7 +191,7 @@ private:
 };
 
 class ijvalue
-  : private virtual ijstate
+  : protected ijstate
 {
 public:
   bool fail() const { return do_state().do_get_failbit(); }
@@ -222,9 +225,10 @@ protected:
 
   typedef std::ostreambuf_iterator<char> buffer_iterator;
 
-private:
+//private:
   friend class ijstreamoid;
   friend class ijpair;
+  friend class ijsource;
 
   friend void jios_read(ijvalue & ij, bool & dest);
   friend void jios_read(ijvalue & ij, std::string & dest);
@@ -275,14 +279,14 @@ private:
 };
 
 class ijsource
-  : private virtual ijstate
+  : boost::noncopyable
 {
   friend class ijstreamoid;
   friend class ijstream;
   friend class ijobject;
 
-  virtual ijstate & do_state() { return *this; }
-  virtual ijstate const& do_state() const { return *this; }
+  virtual ijstate & do_state() = 0;
+  virtual ijstate const& do_state() const = 0;
 
   virtual ijpair & do_ref() = 0;
   virtual ijpair const& do_peek() = 0;
@@ -302,12 +306,12 @@ protected:
 
 inline bool ijstreamoid::fail() const
 {
-  return pimpl_->do_get_failbit();
+  return pimpl_->do_state().do_get_failbit();
 }
 
 inline void ijstreamoid::set_failbit()
 {
-  pimpl_->do_set_failbit();
+  pimpl_->do_state().do_set_failbit();
 }
 
 template<typename T>

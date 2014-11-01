@@ -253,6 +253,9 @@ private:
     BOOST_ASSERT_MSG(false, "null_ijsource accessed");
   } 
 
+  ijstate & do_state() override { return ijpair::do_state(); }
+  ijstate const& do_state() const override { return ijpair::do_state(); }
+
   ijpair & do_ref() override { return *this; }
   ijpair const& do_peek() override { return *this; }
 
