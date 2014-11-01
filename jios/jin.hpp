@@ -53,6 +53,8 @@ public:
 
   void advance();
 
+  bool ready();
+
   bool hint_multiline() const;
 
 protected:
@@ -202,8 +204,6 @@ public:
   bool is_array() const { return json_type::jarray == this->type(); }
   bool is_object() const { return json_type::jobject == this->type(); }
 
-  bool ready() { return do_ready(); }
-
 protected:
   ijvalue() : expired_(false) {}
 
@@ -231,10 +231,6 @@ private:
 
   virtual ijarray do_begin_array() = 0;
   virtual ijobject do_begin_object() = 0;
-  virtual bool do_hint_multiline() const { return false; }
-
-  virtual void do_advance() = 0;
-  virtual bool do_ready() = 0;
 
   void extraction_expiration_boundary();
   bool expired_; // extracted element read, another read triggers advance
@@ -265,13 +261,21 @@ private:
   virtual std::string do_key() const = 0;
 };
 
-class ijsource : protected ijpair
+class ijsource : private virtual ijpair
 {
   friend class ijstreamoid;
   friend class ijstream;
   friend class ijobject;
 
+  ijpair & do_get() { return *this; }
+  ijpair const& do_peek() { return *this; }
+
   virtual bool do_is_terminator() = 0;
+  virtual void do_advance() = 0;
+  virtual bool do_hint_multiline() const { return false; }
+
+protected:
+  virtual bool do_ready() = 0;
 };
 
 ////////////////////////////////////////
@@ -306,6 +310,11 @@ ijobject & ijobject::operator >> (std::tuple<KeyT &, ValT &> const& dest)
     set_failbit();
   }
   return *this;
+}
+
+inline bool ijstreamoid::ready()
+{
+  return pimpl_->do_ready();
 }
 
 inline bool ijstreamoid::hint_multiline() const

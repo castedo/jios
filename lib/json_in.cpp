@@ -53,17 +53,14 @@ private:
   }
 };
 
-class jsonc_ijnode : public ijsource
+class jsonc_value
 {
 public:
-  jsonc_ijnode(shared_ptr<istream_jin_state> const& p_is,
-               json_object * p_node = NULL)
-    : p_state_(p_is)
-    , p_node_(json_object_get(p_node))
-  {
-  }
+  jsonc_value(json_object * p_node = NULL)
+    : p_node_(json_object_get(p_node))
+  {}
 
-  ~jsonc_ijnode()
+  ~jsonc_value()
   {
     if (p_node_) {
       json_object_put(p_node_);
@@ -79,7 +76,29 @@ public:
     p_node_ = json_object_get(p_node);
   }
 
-  bool is_null() const { return !p_node_; }
+  json_object * jsonc_ptr() { return p_node_; }
+
+  bool is_valid() const { return p_node_; }
+
+  jios::json_type get_type() const;
+
+  bool parse(int64_t & dest) const;
+  bool parse(double & dest) const;
+  bool parse(bool & dest) const;
+  bool parse(const char * & begin, size_t & len) const;
+
+private:
+  json_object * p_node_;
+};
+
+class jsonc_ijnode : public ijsource, protected virtual ijpair
+{
+public:
+  jsonc_ijnode(shared_ptr<istream_jin_state> const& p_is,
+               json_object * p_node = NULL)
+    : p_state_(p_is)
+    , value_(p_node)
+  {}
 
 private:
   bool do_get_failbit() const override
@@ -90,36 +109,33 @@ private:
   void do_set_failbit() override
   {
     p_state_->set_failbit();
-    if (p_node_) {
-      json_object_put(p_node_);
-      p_node_ = NULL;
-    }
+    value_.reset();
   }
 
-  jios::json_type do_type() const override;
+  jios::json_type do_type() const override { return value_.get_type(); }
 
-  void do_parse(int64_t & dest) override;
-  void do_parse(double & dest) override;
-  void do_parse(bool & dest) override;
+  template<typename T>
+  void parse_or_fail(T & dest) { if(!value_.parse(dest)) set_failbit(); }
+
+  void do_parse(int64_t & dest) override { parse_or_fail(dest); }
+  void do_parse(double & dest) override { parse_or_fail(dest); }
+  void do_parse(bool & dest) override { parse_or_fail(dest); }
   void do_parse(string & dest) override;
   void do_parse(buffer_iterator dest) override;
-
-  pair<const char *, size_t> do_string();
 
   ijarray do_begin_array() override;
   ijobject do_begin_object() override;
 
   bool do_is_terminator() override
   {
-    return !p_node_ || p_state_->fail();
+    return !value_.is_valid() || p_state_->fail();
   }
 
   bool do_ready() override { return true; }
 
 protected:
   shared_ptr<istream_jin_state> p_state_;
-private:
-  json_object * p_node_;
+  jsonc_value value_;
 };
 
 class jsonc_parsed_ijsource: public jsonc_ijnode
@@ -170,7 +186,7 @@ class jsonc_array_ijsource : public jsonc_parsed_ijsource
   {
     BOOST_ASSERT(json_object_is_type(p_parent_, json_type_array));
     if (json_object_is_type(p_parent_, json_type_array)) {
-      this->reset(json_object_array_get_idx(p_parent_, idx_));
+      value_.reset(json_object_array_get_idx(p_parent_, idx_));
     } else {
       this->set_failbit();
     }
@@ -216,7 +232,7 @@ public:
 private:
   void init()
   {
-    this->reset((p_member_ ? (struct json_object*)p_member_->v : NULL));
+    value_.reset((p_member_ ? (struct json_object*)p_member_->v : NULL));
   }
 
   void do_advance() override;
@@ -282,7 +298,7 @@ private:
 
 streamsize jsonc_parser_node::do_parse_some(const char* buf, streamsize len)
 {
-  this->reset(json_tokener_parse_ex(p_toky_, buf, len));
+  value_.reset(json_tokener_parse_ex(p_toky_, buf, len));
   json_tokener_error jerr = json_tokener_get_error(p_toky_);
   if (jerr != json_tokener_continue && jerr != json_tokener_success) {
     set_failbit();
@@ -297,7 +313,7 @@ streamsize jsonc_parser_node::do_parse_some(const char* buf, streamsize len)
 
 void jsonc_parser_node::do_compel_parse()
 {
-  this->reset(json_tokener_parse_ex(p_toky_, "", -1));
+  value_.reset(json_tokener_parse_ex(p_toky_, "", -1));
   json_tokener_error jerr = json_tokener_get_error(p_toky_);
   if (jerr != json_tokener_success) {
     set_failbit();
@@ -337,7 +353,7 @@ private:
 
 void jsonc_root_ijnode::do_advance()
 {
-  this->reset();
+  value_.reset();
   if (!fail()) { parse(); }
 }
 
@@ -366,12 +382,12 @@ bool jsonc_root_ijnode::do_ready()
   if (!p_is_) return true;
   if (fail()) return true;
   istream & is = p_is_->stream();
-  if (this->is_null()) {
+  if (!value_.is_valid()) {
     readsome_until_nonws(is, buf_, bytes_avail_);
     if (bytes_avail_) {
       dirty_ = true;
     }
-    while (bytes_avail_ > 0 && this->is_null() && !fail()) {
+    while (bytes_avail_ > 0 && !value_.is_valid() && !fail()) {
       streamsize parsed = parse_some(buf_.data(), bytes_avail_);
       if (!fail()) {
         bytes_avail_ -= parsed;
@@ -383,18 +399,18 @@ bool jsonc_root_ijnode::do_ready()
         }
       }
     }
-    if (!this->is_null()) {
+    if (value_.is_valid()) {
       readsome_until_nonws(is, buf_, bytes_avail_);
       dirty_ = (bytes_avail_ > 0);
     }
   }
-  return !is.good() || !this->is_null();
+  return !is.good() || value_.is_valid();
 }
 
 void jsonc_root_ijnode::parse()
 {
   istream & is = p_is_->stream();
-  while (!this->ready()) {
+  while (!this->do_ready()) {
     is.peek();
   }
   if (is.eof() && dirty_) {
@@ -406,7 +422,7 @@ void jsonc_root_ijnode::parse()
 
 // jsonc_ijnode methods
 
-jios::json_type jsonc_ijnode::do_type() const
+jios::json_type jsonc_value::get_type() const
 {
   using jios::json_type;
   switch (json_object_get_type(p_node_)) {
@@ -422,56 +438,63 @@ jios::json_type jsonc_ijnode::do_type() const
   return json_type::jnull;
 }
 
-void jsonc_ijnode::do_parse(int64_t & dest)
+bool jsonc_value::parse(int64_t & dest) const
 {
   if (!json_object_is_type(p_node_, json_type_int)) {
-    set_failbit();
-    return;
+    return false;
   }
   dest = json_object_get_int64(p_node_);
+  return true;
 }
 
-void jsonc_ijnode::do_parse(double & dest)
+bool jsonc_value::parse(double & dest) const
 {
   bool is_numeric = (json_object_is_type(p_node_, json_type_double)
                      || json_object_is_type(p_node_, json_type_int));
   if (!is_numeric) {
-    set_failbit();
-    return;
+    return false;
   }
   dest = json_object_get_double(p_node_);
+  return true;
 }
 
-void jsonc_ijnode::do_parse(bool & dest)
+bool jsonc_value::parse(bool & dest) const
 {
   if (!json_object_is_type(p_node_, json_type_boolean)) {
-    set_failbit();
-    return;
+    return false;
   }
   dest = json_object_get_boolean(p_node_);
+  return true;
 }
 
 void jsonc_ijnode::do_parse(string & dest)
 {
-  auto p = do_string();
-  dest.assign(p.first, p.first + p.second);
+  const char * begin;
+  size_t len;
+  if (!value_.parse(begin, len)) {
+    this->set_failbit();
+  }
+  dest.assign(begin, begin + len);
 }
 
 void jsonc_ijnode::do_parse(buffer_iterator dest)
 {
-  auto p = do_string();
-  copy(p.first, p.first + p.second, dest);
+  const char * begin;
+  size_t len;
+  if (!value_.parse(begin, len)) {
+    this->set_failbit();
+  }
+  copy(begin, begin + len, dest);
 }
 
-pair<const char *, size_t> jsonc_ijnode::do_string()
+bool jsonc_value::parse(const char * & p, size_t & len) const
 {
-  const char * p = "";
   switch (json_object_get_type(p_node_)) {
     case json_type_string:
       {
-        size_t len = json_object_get_string_len(p_node_);
+        len = json_object_get_string_len(p_node_);
         p = json_object_get_string(p_node_);
-        return make_pair(p, len);
+        return true;
       }
       break;
     case json_type_int:
@@ -486,10 +509,10 @@ pair<const char *, size_t> jsonc_ijnode::do_string()
     case json_type_null:
     case json_type_array:
     case json_type_object:
-      set_failbit();
-      break;
+      return false;
   }
-  return make_pair(p, ::strlen(p));
+  len = ::strlen(p);
+  return true;
 }
 
 ijarray jsonc_ijnode::do_begin_array()
@@ -498,7 +521,8 @@ ijarray jsonc_ijnode::do_begin_array()
     set_failbit();
     return ijarray();
   }
-  return shared_ptr<ijsource>(new jsonc_array_ijsource(p_state_, p_node_));
+  return shared_ptr<ijsource>(new jsonc_array_ijsource(p_state_,
+                                                       value_.jsonc_ptr()));
 }
 
 ijobject jsonc_ijnode::do_begin_object()
@@ -507,7 +531,8 @@ ijobject jsonc_ijnode::do_begin_object()
     set_failbit();
     return ijobject();
   }
-  return shared_ptr<ijsource>(new jsonc_object_ijsource(p_state_, p_node_));
+  return shared_ptr<ijsource>(new jsonc_object_ijsource(p_state_,
+                                                        value_.jsonc_ptr()));
 }
 
 

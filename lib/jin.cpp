@@ -16,13 +16,13 @@ void ijstreamoid::advance()
 ijvalue & ijstream::get()
 {
   BOOST_VERIFY(!this->at_end());
-  return *pimpl_;
+  return pimpl_->do_get();
 }
 
 ijvalue const& ijstream::peek()
 {
   BOOST_VERIFY(!this->at_end());
-  return *pimpl_;
+  return pimpl_->do_peek();
 }
 
 void ijstreamoid::increment(ijsource * & p_src)
@@ -60,7 +60,6 @@ string ijpair::key() const
 void ijvalue::extraction_expiration_boundary()
 {
   BOOST_ASSERT(!expired_);
-  if (expired_) { do_advance(); }
   expired_ = true;
 }
 
@@ -239,6 +238,7 @@ void jios_read(ijvalue & src, ojvalue & dest)
 class null_ijsource
   : public ijsource
   , public enable_shared_from_this<null_ijsource>
+  , private virtual ijpair
 {
   void debug() const {
     BOOST_ASSERT_MSG(false, "null_ijsource accessed");
