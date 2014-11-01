@@ -91,7 +91,7 @@ private:
   json_object * p_node_;
 };
 
-class jsonc_ijnode : public ijsource, protected virtual ijpair
+class jsonc_ijnode : public ijsource, protected ijpair
 {
 public:
   jsonc_ijnode(shared_ptr<istream_jin_state> const& p_is,
@@ -101,6 +101,9 @@ public:
   {}
 
 private:
+  ijpair & do_ref() override { return *this; }
+  ijpair const& do_peek() override { return *this; }
+
   bool do_get_failbit() const override
   {
      return p_state_->fail();
@@ -469,22 +472,24 @@ bool jsonc_value::parse(bool & dest) const
 
 void jsonc_ijnode::do_parse(string & dest)
 {
-  const char * begin;
-  size_t len;
-  if (!value_.parse(begin, len)) {
+  const char * begin = nullptr;
+  size_t len = 0;
+  if (value_.parse(begin, len)) {
+    dest.assign(begin, begin + len);
+  } else {
     this->set_failbit();
   }
-  dest.assign(begin, begin + len);
 }
 
 void jsonc_ijnode::do_parse(buffer_iterator dest)
 {
-  const char * begin;
-  size_t len;
-  if (!value_.parse(begin, len)) {
+  const char * begin = nullptr;
+  size_t len = 0;
+  if (value_.parse(begin, len)) {
+    copy(begin, begin + len, dest);
+  } else {
     this->set_failbit();
   }
-  copy(begin, begin + len, dest);
 }
 
 bool jsonc_value::parse(const char * & p, size_t & len) const

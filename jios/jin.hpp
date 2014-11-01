@@ -72,7 +72,7 @@ protected:
   private:
     friend class boost::iterator_core_access;
     void increment() { ijstreamoid::increment(this->base_reference()); }
-    Reference dereference() const { return *(this->base_reference()); }
+    Reference dereference() const { return this->base_reference()->do_ref(); }
   };
 
   static void increment(ijsource * & p_src);
@@ -172,15 +172,26 @@ enum class json_type {
     jarray,
     jobject};
 
-class ijvalue
+class ijstate
   : boost::noncopyable
 {
 public:
-  virtual ~ijvalue() {}
+  virtual ~ijstate() {}
 
   bool fail() const { return do_get_failbit(); }
   void set_failbit() { do_set_failbit(); }
 
+private:
+  friend ijstreamoid;
+
+  virtual bool do_get_failbit() const = 0;
+  virtual void do_set_failbit() = 0;
+};
+
+class ijvalue
+  : public virtual ijstate
+{
+public:
   template<typename T>
   typename std::enable_if<jios_read_exists<T>::value, bool>::type
     read(T & dest)
@@ -217,9 +228,6 @@ private:
   friend void jios_read(ijvalue & ij, std::string & dest);
   friend void jios_read(ijvalue & ij, int64_t & dest);
   friend void jios_read(ijvalue & ij, double & dest);
-
-  virtual bool do_get_failbit() const = 0;
-  virtual void do_set_failbit() = 0;
 
   virtual json_type do_type() const = 0;
 
@@ -261,14 +269,15 @@ private:
   virtual std::string do_key() const = 0;
 };
 
-class ijsource : private virtual ijpair
+class ijsource
+  : public virtual ijstate
 {
   friend class ijstreamoid;
   friend class ijstream;
   friend class ijobject;
 
-  ijpair & do_get() { return *this; }
-  ijpair const& do_peek() { return *this; }
+  virtual ijpair & do_ref() = 0;
+  virtual ijpair const& do_peek() = 0;
 
   virtual bool do_is_terminator() = 0;
   virtual void do_advance() = 0;
@@ -294,7 +303,7 @@ inline void ijstreamoid::set_failbit()
 template<typename T>
 inline ijstream & ijstream::operator >> (T & dest)
 {
-  pimpl_->read(dest);
+  pimpl_->do_ref().read(dest);
   this->advance();
   return *this;
 }

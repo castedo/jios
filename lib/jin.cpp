@@ -10,13 +10,13 @@ namespace jios {
 void ijstreamoid::advance()
 {
   pimpl_->do_advance();
-  pimpl_->expired_ = false;
+  pimpl_->do_ref().expired_ = false;
 }
 
 ijvalue & ijstream::get()
 {
   BOOST_VERIFY(!this->at_end());
-  return pimpl_->do_get();
+  return pimpl_->do_ref();
 }
 
 ijvalue const& ijstream::peek()
@@ -28,7 +28,7 @@ ijvalue const& ijstream::peek()
 void ijstreamoid::increment(ijsource * & p_src)
 {
   p_src->do_advance();
-  p_src->expired_ = false;
+  p_src->do_ref().expired_ = false;
   if (p_src->do_is_terminator() || p_src->fail()) {
     p_src = nullptr;
   }
@@ -37,19 +37,19 @@ void ijstreamoid::increment(ijsource * & p_src)
 ijpair & ijobject::get()
 {
   BOOST_VERIFY(!this->at_end());
-  return *pimpl_;
+  return pimpl_->do_ref();
 }
 
 ijpair const& ijobject::peek()
 {
   BOOST_VERIFY(!this->at_end());
-  return *pimpl_;
+  return pimpl_->do_peek();
 }
 
 string ijobject::key()
 {
   BOOST_VERIFY(!this->at_end());
-  return pimpl_->key();
+  return pimpl_->do_peek().key();
 }
 
 string ijpair::key() const
@@ -131,7 +131,7 @@ void jios_read(ijvalue & ij, double & dest)
 
 bool ijstreamoid::at_end()
 {
-  if (pimpl_->expired_) { advance(); }
+  if (pimpl_->do_peek().expired_) { advance(); }
   return pimpl_->do_is_terminator() || pimpl_->fail();
 }
 
@@ -238,14 +238,18 @@ void jios_read(ijvalue & src, ojvalue & dest)
 class null_ijsource
   : public ijsource
   , public enable_shared_from_this<null_ijsource>
-  , private virtual ijpair
+  , private ijpair
 {
+public:
+  null_ijsource() {}
+
+private:
   void debug() const {
     BOOST_ASSERT_MSG(false, "null_ijsource accessed");
   } 
 
-public:
-  null_ijsource() {}
+  ijpair & do_ref() override { return *this; }
+  ijpair const& do_peek() override { return *this; }
 
   bool do_get_failbit() const override { return true; }
   void do_set_failbit() override { debug(); }
