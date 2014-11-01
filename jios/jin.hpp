@@ -182,10 +182,6 @@ public:
   void set_failbit() { do_set_failbit(); }
 
 private:
-  friend ijvalue;
-  friend ijsource;
-  friend ijstreamoid;
-
   virtual bool do_get_failbit() const = 0;
   virtual void do_set_failbit() = 0;
 };
@@ -194,8 +190,11 @@ class ijvalue
   : boost::noncopyable
 {
 public:
-  bool fail() const { return do_state().do_get_failbit(); }
-  void set_failbit() { do_state().do_set_failbit(); }
+  ijstate & state() { return do_state(); }
+  ijstate const& state() const { return do_state(); }
+
+  bool fail() const { return state().fail(); }
+  void set_failbit() { state().set_failbit(); }
 
   template<typename T>
   typename std::enable_if<jios_read_exists<T>::value, bool>::type
@@ -229,7 +228,6 @@ protected:
 private:
   friend class ijstreamoid;
   friend class ijpair;
-  friend class ijsource;
 
   friend void jios_read(ijvalue & ij, bool & dest);
   friend void jios_read(ijvalue & ij, std::string & dest);
@@ -309,12 +307,12 @@ protected:
 
 inline bool ijstreamoid::fail() const
 {
-  return pimpl_->do_state().do_get_failbit();
+  return pimpl_->do_state().fail();
 }
 
 inline void ijstreamoid::set_failbit()
 {
-  pimpl_->do_state().do_set_failbit();
+  pimpl_->do_state().set_failbit();
 }
 
 template<typename T>

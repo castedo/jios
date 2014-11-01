@@ -36,7 +36,7 @@ void ijstreamoid::increment(ijsource * & p_src)
 
 bool ijsource::is_terminator_or_failed()
 {
-  return do_is_terminator() || do_state().do_get_failbit();
+  return do_is_terminator() || do_state().fail();
 }
 
 ijpair & ijobject::get()
