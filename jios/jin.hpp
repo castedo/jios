@@ -191,7 +191,7 @@ private:
 };
 
 class ijvalue
-  : protected ijstate
+  : boost::noncopyable
 {
 public:
   bool fail() const { return do_state().do_get_failbit(); }
@@ -222,10 +222,11 @@ public:
 
 protected:
   ijvalue() : expired_(false) {}
+  virtual ~ijvalue() {}
 
   typedef std::ostreambuf_iterator<char> buffer_iterator;
 
-//private:
+private:
   friend class ijstreamoid;
   friend class ijpair;
   friend class ijsource;
@@ -235,8 +236,8 @@ protected:
   friend void jios_read(ijvalue & ij, int64_t & dest);
   friend void jios_read(ijvalue & ij, double & dest);
 
-  virtual ijstate & do_state() { return *this; }
-  virtual ijstate const& do_state() const { return *this; }
+  virtual ijstate & do_state() = 0;
+  virtual ijstate const& do_state() const = 0;
 
   virtual json_type do_type() const = 0;
 
@@ -250,7 +251,7 @@ protected:
   virtual ijobject do_begin_object() = 0;
 
   void extraction_expiration_boundary();
-  bool expired_; // extracted element read, another read triggers advance
+  bool expired_; // extracted element read or array/object started
 
   std::istream & read_string_value();
   bool good_string_value_read();
@@ -298,6 +299,8 @@ class ijsource
   bool is_terminator_or_failed();
 
 protected:
+  virtual ~ijsource() {}
+
   virtual bool do_ready() = 0;
 };
 

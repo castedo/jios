@@ -88,22 +88,11 @@ public:
   {}
 
 private:
-  ijstate & do_state() override { return ijpair::do_state(); }
-  ijstate const& do_state() const override { return ijpair::do_state(); }
+  ijstate & do_state() override { return *p_state_; }
+  ijstate const& do_state() const override { return *p_state_; }
 
   ijpair & do_ref() override { return *this; }
   ijpair const& do_peek() override { return *this; }
-
-  bool do_get_failbit() const override
-  {
-     return p_state_->fail();
-  }
-
-  void do_set_failbit() override
-  {
-    p_state_->set_failbit();
-    value_.reset();
-  }
 
   jios::json_type do_type() const override { return value_.get_type(); }
 
