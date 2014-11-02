@@ -48,8 +48,6 @@ public:
 
   bool at_end();
 
-  void advance();
-
   bool ready();
 
   bool hint_multiline() const;
@@ -68,7 +66,9 @@ protected:
   {
   public:
     basic_iterator() : basic_iterator::iterator_adaptor_(nullptr) {}
-    basic_iterator(ijstreamoid * p) : basic_iterator::iterator_adaptor_(p) {}
+    basic_iterator(ijstreamoid * p) : basic_iterator::iterator_adaptor_(p) {
+      ijstreamoid::null_if_end(this->base_reference());
+    }
   private:
     friend class boost::iterator_core_access;
     void increment() { ijstreamoid::increment(this->base_reference()); }
@@ -76,6 +76,7 @@ protected:
   };
 
 private:
+  static void null_if_end(ijstreamoid * & p_src);
   static void increment(ijstreamoid * & p_src);
 
   void unexpire();
@@ -224,7 +225,6 @@ public:
   bool is_object() const { return json_type::jobject == this->type(); }
 
 protected:
-  ijvalue() : expired_(false) {}
   virtual ~ijvalue() {}
 
   typedef std::ostreambuf_iterator<char> buffer_iterator;
@@ -251,9 +251,6 @@ private:
 
   virtual ijarray do_begin_array() = 0;
   virtual ijobject do_begin_object() = 0;
-
-  void extraction_expiration_boundary();
-  bool expired_; // extracted element read or array/object started
 
   std::istream & read_string_value();
   bool good_string_value_read();
@@ -323,7 +320,6 @@ template<typename T>
 inline ijstream & ijstream::operator >> (T & dest)
 {
   this->get().read(dest);
-  this->advance();
   return *this;
 }
 
@@ -333,7 +329,6 @@ ijobject & ijobject::operator >> (std::tuple<KeyT &, ValT &> const& dest)
   ijpair & kval = this->get();
   if (kval.parse_key(std::get<0>(dest))) {
     kval.read(std::get<1>(dest));
-    this->advance();
   } else {
     set_failbit();
   }

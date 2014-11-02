@@ -7,32 +7,28 @@ using namespace std;
 namespace jios {
 
 
-void ijstreamoid::advance()
-{
-  BOOST_ASSERT(expired_);
-  BOOST_ASSERT(pimpl_->do_ref().expired_);
-}
-
 ijvalue & ijstream::get()
 {
-  BOOST_VERIFY(!this->at_end());
   return this->extract();
 }
 
 ijvalue const& ijstream::peek()
 {
-  BOOST_VERIFY(!this->at_end());
   return this->dereference();
+}
+
+void ijstreamoid::null_if_end(ijstreamoid * & p_src)
+{
+  if (p_src->pimpl_->is_terminator_or_failed()) {
+    p_src = nullptr;
+  }
 }
 
 void ijstreamoid::increment(ijstreamoid * & p_src)
 {
   p_src->pimpl_->do_advance();
-  p_src->pimpl_->do_ref().expired_ = false;
   p_src->expired_ = false;
-  if (p_src->pimpl_->is_terminator_or_failed()) {
-    p_src = nullptr;
-  }
+  null_if_end(p_src);
 }
 
 bool ijsource::is_terminator_or_failed()
@@ -42,17 +38,16 @@ bool ijsource::is_terminator_or_failed()
 
 void ijstreamoid::unexpire()
 {
-  if (pimpl_->do_ref().expired_) {
-    BOOST_ASSERT(expired_);
+  if (expired_) {
     pimpl_->do_advance();
-    pimpl_->do_ref().expired_ = false;
     expired_ = false;
   }
-  else { BOOST_ASSERT(!expired_); }
 }
 
 ijpair & ijstreamoid::dereference()
 {
+  unexpire();
+  BOOST_ASSERT(!pimpl_->is_terminator_or_failed());
   return pimpl_->do_ref();
 }
 
@@ -60,19 +55,16 @@ ijpair & ijstreamoid::extract()
 {
   ijpair & ret = dereference();
   expired_ = true;
-  pimpl_->do_ref().expired_ = true;
   return ret;
 }
 
 ijpair & ijobject::get()
 {
-  BOOST_VERIFY(!this->at_end());
   return this->extract();
 }
 
 ijpair const& ijobject::peek()
 {
-  BOOST_VERIFY(!this->at_end());
   return this->dereference();
 }
 
@@ -86,20 +78,13 @@ string ijpair::key() const
   return do_key();
 }
 
-void ijvalue::extraction_expiration_boundary()
-{
-  expired_ = true;
-}
-
 ijarray ijvalue::array()
 {
-  extraction_expiration_boundary();
   return do_begin_array();
 }
 
 ijobject ijvalue::object()
 {
-  extraction_expiration_boundary();
   return do_begin_object();
 }
 
@@ -110,7 +95,6 @@ json_type ijvalue::type() const
 
 istream & ijvalue::read_string_value()
 {
-  extraction_expiration_boundary();
   buf_.clear();
   buf_.str(string());
   do_parse(ostreambuf_iterator<char>(buf_));
@@ -135,25 +119,21 @@ bool ijvalue::good_string_value_read()
 
 void jios_read(ijvalue & ij, bool & dest)
 {
-  ij.extraction_expiration_boundary();
   ij.do_parse(dest);
 }
 
 void jios_read(ijvalue & ij, std::string & dest)
 {
-  ij.extraction_expiration_boundary();
   ij.do_parse(dest);
 }
 
 void jios_read(ijvalue & ij, int64_t & dest)
 {
-  ij.extraction_expiration_boundary();
   ij.do_parse(dest);
 }
 
 void jios_read(ijvalue & ij, double & dest)
 {
-  ij.extraction_expiration_boundary();
   ij.do_parse(dest);
 }
 
