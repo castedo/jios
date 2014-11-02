@@ -38,12 +38,9 @@ class ijstreamoid
 {
 public:
   ijstreamoid();
-
-  ijstreamoid(std::shared_ptr<ijsource> const& pimpl) : pimpl_(pimpl) {}
-
-  ijstreamoid(ijstreamoid && rhs) : pimpl_(rhs.pimpl_) {}
-
-  ijstreamoid & operator = (ijstreamoid && rhs) { pimpl_ = rhs.pimpl_; return *this; }
+  ijstreamoid(std::shared_ptr<ijsource> const& pimpl);
+  ijstreamoid(ijstreamoid && rhs);
+  ijstreamoid & operator = (ijstreamoid && rhs);
 
   bool fail() const;
 

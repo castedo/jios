@@ -10,7 +10,7 @@ namespace jios {
 void ijstreamoid::advance()
 {
   BOOST_ASSERT(expired_);
-  pimpl_->do_ref().expired_ = true;
+  BOOST_ASSERT(pimpl_->do_ref().expired_);
 }
 
 ijvalue & ijstream::get()
@@ -48,6 +48,7 @@ void ijstreamoid::unexpire()
     pimpl_->do_ref().expired_ = false;
     expired_ = false;
   }
+  else { BOOST_ASSERT(!expired_); }
 }
 
 ijpair & ijstreamoid::dereference()
@@ -59,6 +60,7 @@ ijpair & ijstreamoid::extract()
 {
   ijpair & ret = dereference();
   expired_ = true;
+  pimpl_->do_ref().expired_ = true;
   return ret;
 }
 
@@ -309,6 +311,23 @@ ijstreamoid::ijstreamoid()
   : pimpl_(new null_ijsource())
   , expired_(false)
 {}
+
+ijstreamoid::ijstreamoid(std::shared_ptr<ijsource> const& pimpl)
+  : pimpl_(pimpl)
+  , expired_(false)
+{}
+
+ijstreamoid::ijstreamoid(ijstreamoid && rhs)
+  : pimpl_(rhs.pimpl_)
+  , expired_(false)
+{}
+
+ijstreamoid & ijstreamoid::operator = (ijstreamoid && rhs)
+{
+  pimpl_ = rhs.pimpl_;
+  expired_ = rhs.expired_;
+  return *this;
+}
 
 
 } // namespace
