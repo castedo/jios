@@ -81,7 +81,10 @@ protected:
 private:
   static void increment(ijstreamoid * & p_src);
 
+  void unexpire();
+
   std::shared_ptr<ijsource> pimpl_;
+  bool expired_;
 };
 
 class ijstream

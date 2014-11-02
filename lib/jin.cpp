@@ -9,24 +9,30 @@ namespace jios {
 
 void ijstreamoid::advance()
 {
+  BOOST_ASSERT(expired_);
   pimpl_->do_advance();
   pimpl_->do_ref().expired_ = false;
+  expired_ = false;
 }
 
 ijvalue & ijstream::get()
 {
+  BOOST_VERIFY(!this->at_end());
   return this->extract();
 }
 
 ijvalue const& ijstream::peek()
 {
+  BOOST_VERIFY(!this->at_end());
   return this->dereference();
 }
 
 void ijstreamoid::increment(ijstreamoid * & p_src)
 {
+  p_src->unexpire();
   p_src->pimpl_->do_advance();
   p_src->pimpl_->do_ref().expired_ = false;
+  p_src->expired_ = false;
   if (p_src->pimpl_->is_terminator_or_failed()) {
     p_src = nullptr;
   }
@@ -37,25 +43,36 @@ bool ijsource::is_terminator_or_failed()
   return do_is_terminator() || do_state().fail();
 }
 
+void ijstreamoid::unexpire()
+{
+  if (expired_) {
+//    pimpl_->do_advance();
+    expired_ = false;
+  }
+}
+
 ijpair & ijstreamoid::dereference()
 {
-  BOOST_VERIFY(!this->at_end());
+  unexpire();
   return pimpl_->do_ref();
 }
 
 ijpair & ijstreamoid::extract()
 {
   ijpair & ret = dereference();
+  expired_ = true;
   return ret;
 }
 
 ijpair & ijobject::get()
 {
+  BOOST_VERIFY(!this->at_end());
   return this->extract();
 }
 
 ijpair const& ijobject::peek()
 {
+  BOOST_VERIFY(!this->at_end());
   return this->dereference();
 }
 
@@ -143,7 +160,12 @@ void jios_read(ijvalue & ij, double & dest)
 
 bool ijstreamoid::at_end()
 {
-  if (pimpl_->do_ref().expired_) { advance(); }
+  if (pimpl_->do_ref().expired_) {
+    BOOST_ASSERT(expired_);
+    advance();
+  }
+//  if (expired_) { advance(); }
+  unexpire();
   return pimpl_->is_terminator_or_failed();
 }
 
@@ -293,6 +315,7 @@ private:
 
 ijstreamoid::ijstreamoid()
   : pimpl_(new null_ijsource())
+  , expired_(false)
 {}
 
 
