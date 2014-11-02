@@ -38,7 +38,6 @@ public:
 
   json_object * jsonc_ptr() { return p_node_; }
 
-  bool is_valid() const { return p_node_; }
   bool is_terminator() const { return !p_node_; }
 
 private:
@@ -186,6 +185,7 @@ class jsonc_parser_node : public ijsource_parser
 public:
   jsonc_parser_node(shared_ptr<ijstate> const& p_is)
     : p_toky_(json_tokener_new())
+    , pending_(true)
     , value_(p_is)
   {
     if (!p_toky_ || !p_is) {
@@ -201,27 +201,38 @@ public:
   }
 
 private:
+  void induce();
+
   ijstate & do_state() override { return value_.state(); }
   ijstate const& do_state() const override { return value_.state(); }
 
-  ijpair & do_ref() override { return value_; }
+  ijpair & do_ref() override { induce(); return value_; }
 
-  bool do_is_terminator() override { return value_.is_terminator(); }
+  bool do_is_terminator() override { induce(); return value_.is_terminator(); }
 
-  void do_advance() override { value_.reset(); }
+  void do_advance() override { pending_ = true; }
 
-  bool do_ready() override { return value_.is_valid(); }
+  bool do_ready() override { return !pending_; }
 
   streamsize do_parse_some(const char* p, streamsize n) override;
   void do_compel_parse() override;
 
   json_tokener * const p_toky_;
+  bool pending_;
   jsonc_value value_;
 };
+
+void jsonc_parser_node::induce()
+{
+  if (!pending_) return;
+  value_.reset();
+  pending_ = false;
+}
 
 streamsize jsonc_parser_node::do_parse_some(const char* buf, streamsize len)
 {
   value_.reset(json_tokener_parse_ex(p_toky_, buf, len));
+  pending_ = value_.is_terminator();
   json_tokener_error jerr = json_tokener_get_error(p_toky_);
   if (jerr != json_tokener_continue && jerr != json_tokener_success) {
     value_.set_failbit();
@@ -242,6 +253,7 @@ void jsonc_parser_node::do_compel_parse()
     value_.set_failbit();
     json_tokener_reset(p_toky_);
   }
+  pending_ = value_.is_terminator();
 }
 
 // jsonc_value methods

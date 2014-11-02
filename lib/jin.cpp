@@ -26,8 +26,8 @@ void ijstreamoid::null_if_end(ijstreamoid * & p_src)
 
 void ijstreamoid::increment(ijstreamoid * & p_src)
 {
+  p_src->unexpire();
   p_src->pimpl_->do_advance();
-  p_src->expired_ = false;
   null_if_end(p_src);
 }
 
