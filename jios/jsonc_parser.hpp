@@ -1,0 +1,45 @@
+#ifndef JIOS_JSONC_PARSER_HPP
+#define JIOS_JSONC_PARSER_HPP
+
+#include <memory>
+#include <streambuf>
+#include <jios/jin.hpp>
+
+namespace jios {
+
+
+class ijsource_parser : private ijsource
+{
+public:
+  virtual ~ijsource_parser() {}
+
+  ijstate & state() { return do_state(); }
+  ijstate const& state() const { return do_state(); }
+  ijpair & dereference() { return do_ref(); }
+  bool at_terminator() { return do_is_terminator(); }
+  void advance() { do_advance(); }
+  bool ready() { return do_ready(); }
+
+  std::streamsize parse_some(const char* p, std::streamsize n)
+  {
+    return do_parse_some(p, n);
+  }
+
+  void compel_parse() { do_compel_parse(); }
+
+private:
+  virtual std::streamsize do_parse_some(const char* p, std::streamsize n) = 0;
+  virtual void do_compel_parse() = 0;
+};
+
+
+// factory function
+
+std::shared_ptr<ijsource_parser>
+    make_jsonc_parser(std::shared_ptr<ijstate> const&);
+
+
+} // namespace jios
+
+#endif
+
