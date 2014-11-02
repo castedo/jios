@@ -114,3 +114,11 @@ BOOST_AUTO_TEST_CASE( parse_keys_as_int_test )
   }
 }
 
+BOOST_AUTO_TEST_CASE( simple_eof_test )
+{
+  stringstream ss("  \n     \n   ");
+  ijstream jin = json_in(ss);
+  BOOST_CHECK( jin.at_end() );
+  BOOST_CHECK( ss.eof() );
+}
+

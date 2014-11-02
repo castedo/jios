@@ -64,6 +64,7 @@ public:
   json_object * jsonc_ptr() { return p_node_; }
 
   bool is_valid() const { return p_node_; }
+  bool is_terminator() const { return !p_node_; }
 
 private:
   bool parse(const char * & begin, size_t & len) const;
@@ -89,36 +90,12 @@ private:
   string key_;
 };
 
-class jsonc_ijnode : public ijsource
-{
-public:
-  jsonc_ijnode(shared_ptr<ijstate> const& p_is,
-               json_object * p_node = NULL)
-    : value_(p_is, p_node)
-  {}
-
-private:
-  ijstate & do_state() override { return value_.state(); }
-  ijstate const& do_state() const override { return value_.state(); }
-
-  ijpair & do_ref() override { return value_; }
-  ijpair const& do_peek() override { return value_; }
-
-  bool do_is_terminator() override
-  {
-    return !value_.is_valid();
-  }
-
-protected:
-  jsonc_value value_;
-};
-
-class jsonc_parsed_ijsource: public jsonc_ijnode
+class jsonc_parsed_ijsource: public ijsource
 {
 protected:
   jsonc_parsed_ijsource(shared_ptr<ijstate> const& p_is,
                         json_object * p_parent)
-      : jsonc_ijnode(p_is)
+      : value_(p_is)
       , p_parent_(json_object_get(p_parent))
   {
     BOOST_ASSERT(p_parent_);
@@ -131,8 +108,19 @@ protected:
     }
   }
 
+  ijstate & do_state() override { return value_.state(); }
+  ijstate const& do_state() const override { return value_.state(); }
+
+  ijpair & do_ref() override { return value_; }
+
+  bool do_is_terminator() override
+  {
+    return value_.is_terminator();
+  }
+
   bool do_ready() override { return true; }
 
+  jsonc_value value_;
   json_object * const p_parent_;
 };
 
@@ -218,12 +206,17 @@ void jsonc_object_ijsource::do_advance()
   init();
 }
 
-class ijsource_parser : public jsonc_ijnode
+class ijsource_parser : private ijsource
 {
 public:
-  ijsource_parser(shared_ptr<ijstate> const& p_is)
-    : jsonc_ijnode(p_is)
-  {}
+  virtual ~ijsource_parser() {}
+
+  ijstate & state() { return do_state(); }
+  ijstate const& state() const { return do_state(); }
+  ijpair & dereference() { return do_ref(); }
+  bool at_terminator() { return do_is_terminator(); }
+  void advance() { do_advance(); }
+  bool ready() { return do_ready(); }
 
   streamsize parse_some(const char* p, streamsize n)
   {
@@ -241,26 +234,38 @@ class jsonc_parser_node : public ijsource_parser
 {
 public:
   jsonc_parser_node(shared_ptr<ijstate> const& p_is)
-    : ijsource_parser(p_is)
-    , p_toky_(json_tokener_new())
+    : p_toky_(json_tokener_new())
+    , value_(p_is)
   {
-    if (!p_toky_) {
+    if (!p_toky_ || !p_is) {
       BOOST_THROW_EXCEPTION(bad_alloc());
     }
   }
 
-  ~jsonc_parser_node()
-   {
-     if (p_toky_) {
-       json_tokener_free(p_toky_);
-     }
-   }
+  ~jsonc_parser_node() override
+  {
+    if (p_toky_) {
+      json_tokener_free(p_toky_);
+    }
+  }
 
 private:
+  ijstate & do_state() override { return value_.state(); }
+  ijstate const& do_state() const override { return value_.state(); }
+
+  ijpair & do_ref() override { return value_; }
+
+  bool do_is_terminator() override { return value_.is_terminator(); }
+
+  void do_advance() override { value_.reset(); }
+
+  bool do_ready() override { return value_.is_valid(); }
+
   streamsize do_parse_some(const char* p, streamsize n) override;
   void do_compel_parse() override;
 
   json_tokener * const p_toky_;
+  jsonc_value value_;
 };
 
 streamsize jsonc_parser_node::do_parse_some(const char* buf, streamsize len)
@@ -288,34 +293,54 @@ void jsonc_parser_node::do_compel_parse()
   }
 }
 
-class jsonc_root_ijnode : public jsonc_parser_node
+shared_ptr<ijsource_parser> make_jsonc_parser(shared_ptr<ijstate> const& p)
+{
+  return new jsonc_parser_node(p);
+}
+
+class jsonc_root_ijnode : public ijsource
 {
 public:
   jsonc_root_ijnode(shared_ptr<istream> const& p_is)
-    : jsonc_parser_node(make_shared<istream_jin_state>(p_is))
+    : p_parser_(make_jsonc_parser(make_shared<istream_jin_state>(p_is)))
     , p_is_(p_is)
     , buf_(4096)
     , bytes_avail_(0)
     , dirty_(false)
   {
+    if (!p_is_) {
+      BOOST_THROW_EXCEPTION(bad_alloc());
+    }
     parse();
   }
 
 private:
+  ijstate & do_state() override { return p_parser_->state(); }
+  ijstate const& do_state() const override { return p_parser_->state(); }
+
+  ijpair & do_ref() override { return p_parser_->dereference(); }
+
+  bool do_is_terminator() override;
   void do_advance() override;
   bool do_ready() override;
   void parse();
 
+  shared_ptr<ijsource_parser> p_parser_;
   shared_ptr<istream> p_is_;
   vector<char> buf_;
   streamsize bytes_avail_;
   bool dirty_;
 };
 
+bool jsonc_root_ijnode::do_is_terminator()
+{
+  return p_parser_->at_terminator();
+}
+
 void jsonc_root_ijnode::do_advance()
 {
-  value_.reset();
-  if (!value_.fail()) { parse(); }
+  p_parser_->advance();
+  if (!this->fail()) { parse(); }
 }
 
 void readsome_until_nonws(istream & is, vector<char> & buf, streamsize & count)
@@ -341,16 +366,16 @@ bool jsonc_root_ijnode::do_ready()
 {
   BOOST_ASSERT(p_is_);
   if (!p_is_) return true;
-  if (value_.fail()) return true;
+  if (this->fail()) return true;
   istream & is = *p_is_;
-  if (!value_.is_valid()) {
+  if (!p_parser_->ready()) {
     readsome_until_nonws(is, buf_, bytes_avail_);
     if (bytes_avail_) {
       dirty_ = true;
     }
-    while (bytes_avail_ > 0 && !value_.is_valid() && !value_.fail()) {
-      streamsize parsed = parse_some(buf_.data(), bytes_avail_);
-      if (!value_.fail()) {
+    while (bytes_avail_ > 0 && !p_parser_->ready() && !this->fail()) {
+      streamsize parsed = p_parser_->parse_some(buf_.data(), bytes_avail_);
+      if (!this->fail()) {
         bytes_avail_ -= parsed;
         if (bytes_avail_ > 0) {
           char const* rest = buf_.data() + parsed;
@@ -360,12 +385,12 @@ bool jsonc_root_ijnode::do_ready()
         }
       }
     }
-    if (value_.is_valid()) {
+    if (p_parser_->ready()) {
       readsome_until_nonws(is, buf_, bytes_avail_);
       dirty_ = (bytes_avail_ > 0);
     }
   }
-  return !is.good() || value_.is_valid();
+  return !is.good() || p_parser_->ready();
 }
 
 void jsonc_root_ijnode::parse()
@@ -375,7 +400,7 @@ void jsonc_root_ijnode::parse()
   }
   if (p_is_->eof() && dirty_) {
     BOOST_ASSERT(!bytes_avail_);
-    compel_parse();
+    p_parser_->compel_parse();
     dirty_ = false;
   }
 }
