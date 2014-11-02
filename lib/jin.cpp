@@ -10,9 +10,7 @@ namespace jios {
 void ijstreamoid::advance()
 {
   BOOST_ASSERT(expired_);
-  pimpl_->do_advance();
-  pimpl_->do_ref().expired_ = false;
-  expired_ = false;
+  pimpl_->do_ref().expired_ = true;
 }
 
 ijvalue & ijstream::get()
@@ -29,7 +27,6 @@ ijvalue const& ijstream::peek()
 
 void ijstreamoid::increment(ijstreamoid * & p_src)
 {
-  p_src->unexpire();
   p_src->pimpl_->do_advance();
   p_src->pimpl_->do_ref().expired_ = false;
   p_src->expired_ = false;
@@ -45,15 +42,16 @@ bool ijsource::is_terminator_or_failed()
 
 void ijstreamoid::unexpire()
 {
-  if (expired_) {
-//    pimpl_->do_advance();
+  if (pimpl_->do_ref().expired_) {
+    BOOST_ASSERT(expired_);
+    pimpl_->do_advance();
+    pimpl_->do_ref().expired_ = false;
     expired_ = false;
   }
 }
 
 ijpair & ijstreamoid::dereference()
 {
-  unexpire();
   return pimpl_->do_ref();
 }
 
@@ -88,7 +86,6 @@ string ijpair::key() const
 
 void ijvalue::extraction_expiration_boundary()
 {
-  BOOST_ASSERT(!expired_);
   expired_ = true;
 }
 
@@ -160,11 +157,6 @@ void jios_read(ijvalue & ij, double & dest)
 
 bool ijstreamoid::at_end()
 {
-  if (pimpl_->do_ref().expired_) {
-    BOOST_ASSERT(expired_);
-    advance();
-  }
-//  if (expired_) { advance(); }
   unexpire();
   return pimpl_->is_terminator_or_failed();
 }
