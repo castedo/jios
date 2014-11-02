@@ -58,24 +58,28 @@ public:
   bool hint_multiline() const;
 
 protected:
+  ijpair & dereference();
+  ijpair & extract();
+
   template<class Reference>
   class basic_iterator
     : public boost::iterator_adaptor<basic_iterator<Reference>,
-                                     ijsource *,
+                                     ijstreamoid *,
                                      Reference,
                                      boost::single_pass_traversal_tag,
                                      Reference>
   {
   public:
     basic_iterator() : basic_iterator::iterator_adaptor_(nullptr) {}
-    basic_iterator(ijsource * p) : basic_iterator::iterator_adaptor_(p) {}
+    basic_iterator(ijstreamoid * p) : basic_iterator::iterator_adaptor_(p) {}
   private:
     friend class boost::iterator_core_access;
     void increment() { ijstreamoid::increment(this->base_reference()); }
-    Reference dereference() const { return this->base_reference()->do_ref(); }
+    Reference dereference() const { return this->base()->dereference(); }
   };
 
-  static void increment(ijsource * & p_src);
+private:
+  static void increment(ijstreamoid * & p_src);
 
   std::shared_ptr<ijsource> pimpl_;
 };
@@ -96,7 +100,7 @@ public:
 
   typedef basic_iterator<ijvalue &> iterator;
 
-  iterator begin() { return iterator(pimpl_.get()); }
+  iterator begin() { return iterator(this); }
   iterator end() { return iterator(); }
 };
 
@@ -132,7 +136,7 @@ public:
 
   typedef basic_iterator<ijpair &> iterator;
 
-  iterator begin() { return iterator(pimpl_.get()); }
+  iterator begin() { return iterator(this); }
   iterator end() { return iterator(); }
 };
 
@@ -282,8 +286,6 @@ class ijsource
 {
 protected:
   friend class ijstreamoid;
-  friend class ijstream;
-  friend class ijobject;
 
   virtual ~ijsource() {}
 
@@ -291,7 +293,6 @@ protected:
   virtual ijstate const& do_state() const = 0;
 
   virtual ijpair & do_ref() = 0;
-  virtual ijpair const& do_peek() { return do_ref(); }
 
   virtual bool do_is_terminator() = 0;
   virtual void do_advance() = 0;
@@ -321,7 +322,7 @@ inline void ijstreamoid::set_failbit()
 template<typename T>
 inline ijstream & ijstream::operator >> (T & dest)
 {
-  pimpl_->do_ref().read(dest);
+  this->get().read(dest);
   this->advance();
   return *this;
 }

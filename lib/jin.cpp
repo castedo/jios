@@ -15,21 +15,19 @@ void ijstreamoid::advance()
 
 ijvalue & ijstream::get()
 {
-  BOOST_VERIFY(!this->at_end());
-  return pimpl_->do_ref();
+  return this->extract();
 }
 
 ijvalue const& ijstream::peek()
 {
-  BOOST_VERIFY(!this->at_end());
-  return pimpl_->do_peek();
+  return this->dereference();
 }
 
-void ijstreamoid::increment(ijsource * & p_src)
+void ijstreamoid::increment(ijstreamoid * & p_src)
 {
-  p_src->do_advance();
-  p_src->do_ref().expired_ = false;
-  if (p_src->is_terminator_or_failed()) {
+  p_src->pimpl_->do_advance();
+  p_src->pimpl_->do_ref().expired_ = false;
+  if (p_src->pimpl_->is_terminator_or_failed()) {
     p_src = nullptr;
   }
 }
@@ -39,22 +37,31 @@ bool ijsource::is_terminator_or_failed()
   return do_is_terminator() || do_state().fail();
 }
 
-ijpair & ijobject::get()
+ijpair & ijstreamoid::dereference()
 {
   BOOST_VERIFY(!this->at_end());
   return pimpl_->do_ref();
 }
 
+ijpair & ijstreamoid::extract()
+{
+  ijpair & ret = dereference();
+  return ret;
+}
+
+ijpair & ijobject::get()
+{
+  return this->extract();
+}
+
 ijpair const& ijobject::peek()
 {
-  BOOST_VERIFY(!this->at_end());
-  return pimpl_->do_peek();
+  return this->dereference();
 }
 
 string ijobject::key()
 {
-  BOOST_VERIFY(!this->at_end());
-  return pimpl_->do_peek().key();
+  return this->peek().key();
 }
 
 string ijpair::key() const
@@ -136,7 +143,7 @@ void jios_read(ijvalue & ij, double & dest)
 
 bool ijstreamoid::at_end()
 {
-  if (pimpl_->do_peek().expired_) { advance(); }
+  if (pimpl_->do_ref().expired_) { advance(); }
   return pimpl_->is_terminator_or_failed();
 }
 
@@ -258,7 +265,6 @@ private:
   ijstate const& do_state() const override { return *this; }
 
   ijpair & do_ref() override { return *this; }
-  ijpair const& do_peek() override { return *this; }
 
   bool do_get_failbit() const override { return true; }
   void do_set_failbit() override { debug(); }
@@ -285,7 +291,9 @@ private:
 
 // ijstreamoid
 
-ijstreamoid::ijstreamoid() : pimpl_(new null_ijsource()) {}
+ijstreamoid::ijstreamoid()
+  : pimpl_(new null_ijsource())
+{}
 
 
 } // namespace
