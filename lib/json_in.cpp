@@ -43,15 +43,13 @@ public:
     if (!p_is_) {
       BOOST_THROW_EXCEPTION(bad_alloc());
     }
-    induce();
   }
 
 private:
   ijstate & do_state() override { return p_parser_->state(); }
   ijstate const& do_state() const override { return p_parser_->state(); }
 
-  ijpair & do_ref() override { return p_parser_->dereference(); }
-
+  ijpair & do_ref() override;
   bool do_is_terminator() override;
   void do_advance() override;
   bool do_ready() override;
@@ -63,15 +61,22 @@ private:
   streamsize bytes_avail_;
 };
 
+ijpair & jsonc_root_ijnode::do_ref()
+{
+  induce();
+  return p_parser_->dereference();
+}
+
 bool jsonc_root_ijnode::do_is_terminator()
 {
+  induce();
   return p_parser_->at_terminator();
 }
 
 void jsonc_root_ijnode::do_advance()
 {
+  induce();
   p_parser_->advance();
-  if (!this->fail()) { induce(); }
 }
 
 void readsome_until_nonws(istream & is, vector<char> & buf, streamsize & count)

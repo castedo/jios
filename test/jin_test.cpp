@@ -122,3 +122,54 @@ BOOST_AUTO_TEST_CASE( simple_eof_test )
   BOOST_CHECK( ss.eof() );
 }
 
+BOOST_AUTO_TEST_CASE( simple_incremental_test )
+{
+  stringstream ss;
+  int i;
+  ijstream jin = json_in(ss);
+  BOOST_CHECK( !jin.ready() );
+  BOOST_CHECK( !ss.eof() );
+
+  ss << "1 ";
+  jin >> i;
+  BOOST_CHECK_EQUAL( i, 1 );
+  BOOST_CHECK( !jin.ready() );
+  BOOST_CHECK( !ss.eof() );
+
+  ss << "2 ";
+  jin >> i;
+  BOOST_CHECK_EQUAL( i, 2 );
+  BOOST_CHECK( !jin.ready() );
+  BOOST_CHECK( !ss.eof() );
+
+  ss << "3";
+  jin >> i;
+  BOOST_CHECK_EQUAL( i, 3 );
+
+  BOOST_CHECK( jin.at_end() );
+  BOOST_CHECK( ss.eof() );
+}
+
+BOOST_AUTO_TEST_CASE( async_test )
+{
+  stringstream ss;
+  int i;
+  ijstream jin = json_in(ss);
+  BOOST_CHECK( !jin.ready() );
+  BOOST_CHECK( !ss.eof() );
+
+  ss << "12 ";
+  BOOST_REQUIRE_GT( ss.rdbuf()->in_avail(), 0 );
+  BOOST_CHECK( jin.ready() );
+  jin >> i;
+  BOOST_CHECK_EQUAL( i, 12 );
+
+  ss << " 345";
+  BOOST_CHECK( !jin.ready() );
+  BOOST_CHECK( !ss.eof() );
+  ss << "67 ";
+  BOOST_CHECK( jin.ready() );
+  jin >> i;
+  BOOST_CHECK_EQUAL( i, 34567 );
+}
+
