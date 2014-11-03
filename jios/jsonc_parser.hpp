@@ -31,11 +31,8 @@ public:
     return ret;
   }
 
-  void compel_parse() { do_compel_parse(); }
-
 private:
   virtual std::streamsize do_parse_some(const char* p, std::streamsize n) = 0;
-  virtual void do_compel_parse() = 0;
 };
 
 

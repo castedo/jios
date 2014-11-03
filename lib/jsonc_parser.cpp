@@ -185,7 +185,7 @@ class jsonc_parser_node : public ijsource_parser
 public:
   jsonc_parser_node(shared_ptr<ijstate> const& p_is)
     : p_toky_(json_tokener_new())
-    , pending_(true)
+    , tok_err_(json_tokener_success)
     , value_(p_is)
   {
     if (!p_toky_ || !p_is) {
@@ -210,46 +210,38 @@ private:
 
   bool do_is_terminator() override { induce(); return value_.is_empty(); }
 
-  void do_advance() override { pending_ = true; value_.reset(); }
+  void do_advance() override { value_.reset(); }
 
-  bool do_ready() override { return !pending_; }
+  bool do_ready() override { return !value_.is_empty(); }
 
   streamsize do_parse_some(const char* p, streamsize n) override;
-  void do_compel_parse() override;
 
   json_tokener * const p_toky_;
-  bool pending_;
+  json_tokener_error tok_err_;
   jsonc_value value_;
 };
-
-void jsonc_parser_node::induce()
-{
-  if (!pending_) return;
-  value_.reset();
-  pending_ = false;
-}
 
 streamsize jsonc_parser_node::do_parse_some(const char* buf, streamsize len)
 {
   value_.reset(json_tokener_parse_ex(p_toky_, buf, len));
-  json_tokener_error jerr = json_tokener_get_error(p_toky_);
-  pending_ = (jerr == json_tokener_continue);
-  if (jerr != json_tokener_continue && jerr != json_tokener_success) {
+  tok_err_ = json_tokener_get_error(p_toky_);
+  if (tok_err_ != json_tokener_continue && tok_err_ != json_tokener_success) {
     value_.set_failbit();
     json_tokener_reset(p_toky_);
   }
   return p_toky_->char_offset;
 }
 
-void jsonc_parser_node::do_compel_parse()
+void jsonc_parser_node::induce()
 {
-  value_.reset(json_tokener_parse_ex(p_toky_, "", -1));
-  json_tokener_error jerr = json_tokener_get_error(p_toky_);
-  if (jerr != json_tokener_success) {
-    value_.set_failbit();
-    json_tokener_reset(p_toky_);
+  if (tok_err_ == json_tokener_continue) {
+    value_.reset(json_tokener_parse_ex(p_toky_, "", -1));
+    tok_err_ = json_tokener_get_error(p_toky_);
+    if (tok_err_ != json_tokener_success) {
+      value_.set_failbit();
+      json_tokener_reset(p_toky_);
+    }
   }
-  pending_ = false;
 }
 
 // jsonc_value methods
