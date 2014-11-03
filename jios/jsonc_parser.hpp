@@ -22,7 +22,13 @@ public:
 
   std::streamsize parse_some(const char* p, std::streamsize n)
   {
-    return do_parse_some(p, n);
+    std::streamsize ret = do_parse_some(p, n);
+    BOOST_ASSERT(ret > 0);
+    if (ret <= 0) {
+      do_state().set_failbit();
+      return 0;
+    }
+    return ret;
   }
 
   void compel_parse() { do_compel_parse(); }

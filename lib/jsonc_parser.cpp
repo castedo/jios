@@ -38,7 +38,7 @@ public:
 
   json_object * jsonc_ptr() { return p_node_; }
 
-  bool is_terminator() const { return !p_node_; }
+  bool is_empty() const { return !p_node_; }
 
 private:
   bool parse(const char * & begin, size_t & len) const;
@@ -89,7 +89,7 @@ protected:
 
   bool do_is_terminator() override
   {
-    return value_.is_terminator();
+    return value_.is_empty();
   }
 
   bool do_ready() override { return true; }
@@ -208,9 +208,9 @@ private:
 
   ijpair & do_ref() override { induce(); return value_; }
 
-  bool do_is_terminator() override { induce(); return value_.is_terminator(); }
+  bool do_is_terminator() override { induce(); return value_.is_empty(); }
 
-  void do_advance() override { pending_ = true; }
+  void do_advance() override { pending_ = true; value_.reset(); }
 
   bool do_ready() override { return !pending_; }
 
@@ -232,15 +232,11 @@ void jsonc_parser_node::induce()
 streamsize jsonc_parser_node::do_parse_some(const char* buf, streamsize len)
 {
   value_.reset(json_tokener_parse_ex(p_toky_, buf, len));
-  pending_ = value_.is_terminator();
+  pending_ = value_.is_empty();
   json_tokener_error jerr = json_tokener_get_error(p_toky_);
   if (jerr != json_tokener_continue && jerr != json_tokener_success) {
     value_.set_failbit();
     json_tokener_reset(p_toky_);
-    return 0;
-  }
-  if (p_toky_->char_offset == 0) {
-    value_.set_failbit();
   }
   return p_toky_->char_offset;
 }
@@ -253,7 +249,7 @@ void jsonc_parser_node::do_compel_parse()
     value_.set_failbit();
     json_tokener_reset(p_toky_);
   }
-  pending_ = value_.is_terminator();
+  pending_ = false;
 }
 
 // jsonc_value methods
