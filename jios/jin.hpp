@@ -335,11 +335,6 @@ ijobject & ijobject::operator >> (std::tuple<KeyT &, ValT &> const& dest)
   return *this;
 }
 
-inline bool ijstreamoid::ready()
-{
-  return pimpl_->do_ready();
-}
-
 inline bool ijstreamoid::hint_multiline() const
 { 
   return pimpl_->do_hint_multiline();

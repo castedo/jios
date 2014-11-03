@@ -44,6 +44,12 @@ void ijstreamoid::unexpire()
   }
 }
 
+bool ijstreamoid::ready()
+{
+  unexpire();
+  return pimpl_->do_ready();
+}
+
 ijpair & ijstreamoid::dereference()
 {
   unexpire();

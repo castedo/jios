@@ -8,7 +8,7 @@
 namespace jios {
 
 
-class ijsource_parser : private ijsource
+class ijsource_parser : public ijsource
 {
 public:
   virtual ~ijsource_parser() {}

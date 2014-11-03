@@ -4,6 +4,7 @@ add_executable(jios-test
     jin_test.cpp
     jout_test.cpp
     express_test.cpp
+    parser_test.cpp
     test.cpp
     assertion_failed.cpp
 )

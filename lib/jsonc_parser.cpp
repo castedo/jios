@@ -232,8 +232,8 @@ void jsonc_parser_node::induce()
 streamsize jsonc_parser_node::do_parse_some(const char* buf, streamsize len)
 {
   value_.reset(json_tokener_parse_ex(p_toky_, buf, len));
-  pending_ = value_.is_empty();
   json_tokener_error jerr = json_tokener_get_error(p_toky_);
+  pending_ = (jerr == json_tokener_continue);
   if (jerr != json_tokener_continue && jerr != json_tokener_success) {
     value_.set_failbit();
     json_tokener_reset(p_toky_);
