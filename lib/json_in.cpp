@@ -8,13 +8,37 @@ using namespace std;
 namespace jios {
 
 
-class istream_jin_state : public ijstate
+class istream_facade : public ijstate
 {
 public:
-  istream_jin_state(shared_ptr<istream> const& p_is) : p_is_(p_is) {}
+  istream_facade(shared_ptr<istream> const& p_is)
+    : p_is_(p_is)
+    , buf_(4096)
+    , bytes_avail_(0)
+  {
+    if (!p_is_) {
+      BOOST_THROW_EXCEPTION(bad_alloc());
+    }
+  }
+
+  void peek() { p_is_->peek(); }
+
+  bool good() { return p_is_->good(); }
+
+  const char * begin() { return buf_.data(); }
+
+  streamsize avail() const { return bytes_avail_; }
+
+  void readsome_nonws();
+
+  void readsome_if_empty();
+
+  void extract(streamsize n);
 
 private:
   shared_ptr<istream> p_is_;
+  vector<char> buf_;
+  streamsize bytes_avail_;
 
   bool do_get_failbit() const override
   {
@@ -35,10 +59,8 @@ class jsonc_root_ijnode : public ijsource
 {
 public:
   jsonc_root_ijnode(shared_ptr<istream> const& p_is)
-    : p_parser_(make_jsonc_parser(make_shared<istream_jin_state>(p_is)))
-    , p_is_(p_is)
-    , buf_(4096)
-    , bytes_avail_(0)
+    : p_parser_(make_jsonc_parser(make_shared<istream_facade>(p_is)))
+    , p_is_(new istream_facade(p_is))
   {
     if (!p_is_) {
       BOOST_THROW_EXCEPTION(bad_alloc());
@@ -56,9 +78,7 @@ private:
   void induce();
 
   shared_ptr<ijsource_parser> p_parser_;
-  shared_ptr<istream> p_is_;
-  vector<char> buf_;
-  streamsize bytes_avail_;
+  shared_ptr<istream_facade> p_is_;
 };
 
 ijpair & jsonc_root_ijnode::do_ref()
@@ -79,22 +99,39 @@ void jsonc_root_ijnode::do_advance()
   p_parser_->advance();
 }
 
-void readsome_until_nonws(istream & is, vector<char> & buf, streamsize & count)
+void istream_facade::readsome_nonws()
 {
-  if (!count && is.good()) {
-    count = is.readsome(buf.data(), buf.size());
+  istream & is = *p_is_;
+  if (!bytes_avail_ && is.good()) {
+    bytes_avail_ = is.readsome(buf_.data(), buf_.size());
   }
-  char const* it = buf.data();
-  while (count > 0 && ::isspace(*it)) {
+  char const* it = buf_.data();
+  while (bytes_avail_ > 0 && ::isspace(*it)) {
     ++it;
-    --count;
-    if (!count && is.good()) {
-      count = is.readsome(buf.data(), buf.size());
-      it = buf.data();
+    --bytes_avail_;
+    if (!bytes_avail_ && is.good()) {
+      bytes_avail_ = is.readsome(buf_.data(), buf_.size());
+      it = buf_.data();
     }
   }
-  if (count > 0 && it != buf.data()) {
-    copy(it, it + count, buf.data());
+  if (bytes_avail_ > 0 && it != buf_.data()) {
+    copy(it, it + bytes_avail_, buf_.data());
+  }
+}
+
+void istream_facade::readsome_if_empty()
+{
+  if (!bytes_avail_) {
+    bytes_avail_ = p_is_->readsome(buf_.data(), buf_.size());
+  }
+}
+
+void istream_facade::extract(streamsize n)
+{
+  bytes_avail_ -= n;
+  if (bytes_avail_ > 0) {
+    char const* rest = buf_.data() + n;
+    copy(rest, rest + bytes_avail_, buf_.data());
   }
 }
 
@@ -103,26 +140,21 @@ bool jsonc_root_ijnode::do_ready()
   BOOST_ASSERT(p_is_);
   if (!p_is_) return true;
   if (this->fail()) return true;
-  istream & is = *p_is_;
   if (!p_parser_->ready()) {
-    readsome_until_nonws(is, buf_, bytes_avail_);
-    while (bytes_avail_ > 0 && !p_parser_->ready() && !this->fail()) {
-      streamsize parsed = p_parser_->parse_some(buf_.data(), bytes_avail_);
+    //BUG: can skip whitespace inside string
+    p_is_->readsome_nonws();
+    while (p_is_->avail() > 0 && !p_parser_->ready() && !this->fail()) {
+      streamsize parsed = p_parser_->parse_some(p_is_->begin(), p_is_->avail());
       if (!this->fail()) {
-        bytes_avail_ -= parsed;
-        if (bytes_avail_ > 0) {
-          char const* rest = buf_.data() + parsed;
-          copy(rest, rest + bytes_avail_, buf_.data());
-        } else {
-          bytes_avail_ = is.readsome(buf_.data(), buf_.size());
-        }
+        p_is_->extract(parsed);
+        p_is_->readsome_if_empty();  
       }
     }
     if (p_parser_->ready()) {
-      readsome_until_nonws(is, buf_, bytes_avail_);
+      p_is_->readsome_nonws();
     }
   }
-  return !is.good() || p_parser_->ready();
+  return !p_is_->good() || p_parser_->ready();
 }
 
 void jsonc_root_ijnode::induce()
