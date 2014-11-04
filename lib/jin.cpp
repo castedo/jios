@@ -299,7 +299,7 @@ ijstreamoid::ijstreamoid()
 {}
 
 ijstreamoid::ijstreamoid(std::shared_ptr<ijsource> const& pimpl)
-  : pimpl_(pimpl)
+  : pimpl_(pimpl ? pimpl : make_shared<null_ijsource>())
   , expired_(false)
 {}
 

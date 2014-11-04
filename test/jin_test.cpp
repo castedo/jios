@@ -68,15 +68,54 @@ BOOST_AUTO_TEST_CASE( parse_bad_time_test )
   BOOST_CHECK( ss.fail() );
 }
 
-BOOST_AUTO_TEST_CASE( parse_list_test )
+void test_empty_array(string json)
 {
-  istringstream ss("[1, 2, 3]");
+  istringstream ss(json);
   list<int> a;
-  a.push_back(4);
+  a.push_back(666);
   json_in(ss) >> a;
-  list<int> expect = {1, 2, 3};
+  BOOST_CHECK( a.empty() );
+
+  ss.str(json);
+  ijstream jin = json_in(ss);
+  BOOST_CHECK( !jin.at_end() );
+  ijvalue & ij = jin.get();
+  BOOST_CHECK( ij.is_array() );
+  ijarray ija = ij.array();
+  BOOST_CHECK( ija.at_end() );
+}
+
+BOOST_AUTO_TEST_CASE( parse_empty_arrays )
+{
+  test_empty_array("[]");
+  test_empty_array(" []");
+  test_empty_array("[ ]");
+  test_empty_array("[] ");
+  test_empty_array(" [ ]");
+  test_empty_array(" [] ");
+  test_empty_array("[ ] ");
+}
+
+void test_array(string json, list<int> expect)
+{
+  istringstream ss(json);
+  ijstream jin = json_in(ss);
+  list<int> a;
+  jin >> a;
   BOOST_CHECK_EQUAL( a.size(), expect.size() );
   BOOST_CHECK( a == expect );
+  BOOST_CHECK( !ss.fail() );
+  BOOST_CHECK( !ss.eof() );
+  BOOST_CHECK( jin.at_end() );
+  BOOST_CHECK( !ss.fail() );
+  BOOST_CHECK( ss.eof() );
+}
+
+BOOST_AUTO_TEST_CASE( parse_lists_test )
+{
+  test_array("[1 ]", {1});
+  test_array("[1 , 2 ]", {1, 2});
+  test_array("[1, 2, 3]", {1, 2, 3});
 }
 
 BOOST_AUTO_TEST_CASE( parse_tie_test )
