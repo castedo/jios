@@ -7,6 +7,7 @@ add_library(jios
     json_in.cpp
     protobuf_oj.cpp
     protobuf_ij.cpp
+    istream_ij.cpp
     jsonc_parser.cpp
 )
 
