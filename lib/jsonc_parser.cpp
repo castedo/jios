@@ -274,7 +274,7 @@ private:
 
   bool do_is_terminator() override { induce(); return value_.is_empty(); }
 
-  void do_advance() override { value_.reset(); }
+  void do_advance() override { induce(); value_.reset(); }
 
   bool do_ready() override;
 
@@ -285,6 +285,9 @@ private:
 
 void jsonc_parser_node::induce()
 {
+  while (this->expecting()) {
+    p_is_->peek();
+  }
   if (parser_.expecting()) {
     value_.reset(parser_.induce_parse());
     if (value_.is_empty()) {
@@ -313,7 +316,7 @@ bool jsonc_parser_node::do_ready()
       p_is_->readsome_nonws();
     }
   }
-  return !value_.is_empty();
+  return !value_.is_empty() || !p_is_->good();
 }
 
 // jsonc_value methods

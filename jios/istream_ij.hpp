@@ -15,9 +15,15 @@ public:
   istream_facade(std::shared_ptr<std::istream> const& p_is);
   istream_facade(std::istream & is);
 
-  void peek() { p_is_->peek(); }
+  void peek()
+  {
+    BOOST_ASSERT(!bytes_avail_);
+    if (!bytes_avail_) {
+      p_is_->peek();
+    }
+  }
 
-  bool good() const { return p_is_->good(); }
+  bool good() const { return !this->fail() && !this->eof(); }
 
   bool eof() const
   {
