@@ -31,7 +31,7 @@ private:
   void induce();
 
   shared_ptr<istream_facade> p_is_;
-  shared_ptr<ijsource_parser> p_parser_;
+  shared_ptr<ijsource> p_parser_;
 };
 
 ijpair & jsonc_root_ijnode::do_ref()
@@ -43,7 +43,7 @@ ijpair & jsonc_root_ijnode::do_ref()
 bool jsonc_root_ijnode::do_is_terminator()
 {
   induce();
-  return p_parser_->at_terminator();
+  return p_parser_->is_terminator();
 }
 
 void jsonc_root_ijnode::do_advance()
@@ -56,21 +56,6 @@ bool jsonc_root_ijnode::do_ready()
 {
   BOOST_ASSERT(p_is_);
   if (!p_is_) return true;
-  if (this->fail()) return true;
-  if (!p_parser_->ready()) {
-    //BUG: can skip whitespace inside string
-    p_is_->readsome_nonws();
-    while (p_is_->avail() > 0 && !p_parser_->ready() && !this->fail()) {
-      streamsize parsed = p_parser_->parse_some(p_is_->begin(), p_is_->avail());
-      if (!this->fail()) {
-        p_is_->extract(parsed);
-        p_is_->readsome_if_empty();  
-      }
-    }
-    if (p_parser_->ready()) {
-      p_is_->readsome_nonws();
-    }
-  }
   return !p_is_->good() || p_parser_->ready();
 }
 

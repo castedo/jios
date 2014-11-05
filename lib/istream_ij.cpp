@@ -1,6 +1,7 @@
 #include <jios/istream_ij.hpp>
 
 #include <boost/throw_exception.hpp>
+#include <boost/core/null_deleter.hpp>
 
 using namespace std;
 
@@ -17,6 +18,13 @@ istream_facade::istream_facade(shared_ptr<istream> const& p_is)
   if (!p_is_) {
     BOOST_THROW_EXCEPTION(bad_alloc());
   }
+}
+
+istream_facade::istream_facade(istream & is)
+  : p_is_(&is, boost::null_deleter())
+  , buf_(4096)
+  , bytes_avail_(0)
+{
 }
 
 void istream_facade::readsome_nonws()

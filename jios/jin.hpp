@@ -281,26 +281,30 @@ private:
 class ijsource
   : boost::noncopyable
 {
-protected:
   friend class ijstreamoid;
-
-  virtual ~ijsource() {}
 
   virtual ijstate & do_state() = 0;
   virtual ijstate const& do_state() const = 0;
-
   virtual ijpair & do_ref() = 0;
-
   virtual bool do_is_terminator() = 0;
   virtual void do_advance() = 0;
   virtual bool do_hint_multiline() const { return false; }
+  virtual bool do_ready() = 0;
 
   bool is_terminator_or_failed();
 
+public:
+  virtual ~ijsource() {}
+
   bool fail() const { return do_state().fail(); }
   void set_failbit() { do_state().set_failbit(); }
-
-  virtual bool do_ready() = 0;
+  ijstate & state() { return do_state(); }
+  ijstate const& state() const { return do_state(); }
+  ijpair & dereference() { return do_ref(); }
+  bool is_terminator() { return do_is_terminator(); }
+  void advance() { do_advance(); }
+  bool hint_multiline() { return do_hint_multiline(); }
+  bool ready() { return do_ready(); }
 };
 
 ////////////////////////////////////////

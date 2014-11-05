@@ -18,21 +18,18 @@ public:
 
 BOOST_AUTO_TEST_CASE( parser_test )
 {
-  auto p_src = make_jsonc_parser(make_shared<simple_ijstate>());
-  ijstream ij(p_src);
-  string buf = "{}";
+  stringstream ss;
+  ijstream ij(make_jsonc_parser(make_shared<istream_facade>(ss)));
 
   BOOST_CHECK( !ij.ready() );
-  BOOST_CHECK_EQUAL( buf.size(), p_src->parse_some(buf.data(), buf.size()) );
+  ss << "{}";
   BOOST_CHECK( ij.ready() );
   BOOST_CHECK( !ij.at_end() );
   BOOST_CHECK( ij.get().is_object() );
 
-  buf = "[";
-  BOOST_CHECK_EQUAL( buf.size(), p_src->parse_some(buf.data(), buf.size()) );
+  ss <<"[";
   BOOST_CHECK( !ij.ready() );
-  buf = "]";
-  BOOST_CHECK_EQUAL( buf.size(), p_src->parse_some(buf.data(), buf.size()) );
+  ss << "]";
   BOOST_CHECK( ij.ready() );
   BOOST_CHECK( !ij.at_end() );
   BOOST_CHECK( ij.get().is_array() );

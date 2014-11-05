@@ -180,11 +180,14 @@ void jsonc_object_ijsource::do_advance()
   init();
 }
 
-class jsonc_parser_node : public ijsource_parser
+// jsonc_parser_node
+
+class jsonc_parser_node : public ijsource
 {
 public:
-  jsonc_parser_node(shared_ptr<ijstate> const& p_is)
-    : p_toky_(json_tokener_new())
+  jsonc_parser_node(shared_ptr<istream_facade> const& p_is)
+    : p_is_(p_is)
+    , p_toky_(json_tokener_new())
     , tok_err_(json_tokener_success)
     , value_(p_is)
   {
@@ -212,22 +215,28 @@ private:
 
   void do_advance() override { value_.reset(); }
 
-  bool do_ready() override { return !value_.is_empty(); }
+  bool do_ready() override;
 
-  streamsize do_parse_some(const char* p, streamsize n) override;
+  streamsize parse_some(const char* p, streamsize n);
 
+  shared_ptr<istream_facade> p_is_;
   json_tokener * const p_toky_;
   json_tokener_error tok_err_;
   jsonc_value value_;
 };
 
-streamsize jsonc_parser_node::do_parse_some(const char* buf, streamsize len)
+streamsize jsonc_parser_node::parse_some(const char* buf, streamsize len)
 {
   value_.reset(json_tokener_parse_ex(p_toky_, buf, len));
   tok_err_ = json_tokener_get_error(p_toky_);
   if (tok_err_ != json_tokener_continue && tok_err_ != json_tokener_success) {
     value_.set_failbit();
     json_tokener_reset(p_toky_);
+  }
+  if (p_toky_->char_offset <= 0) {
+    BOOST_ASSERT(value_.fail());
+    value_.set_failbit();
+    return 0;
   }
   return p_toky_->char_offset;
 }
@@ -242,6 +251,25 @@ void jsonc_parser_node::induce()
       json_tokener_reset(p_toky_);
     }
   }
+}
+
+bool jsonc_parser_node::do_ready()
+{
+  if (value_.is_empty()) {
+    //BUG: can skip whitespace inside string
+    p_is_->readsome_nonws();
+    while (p_is_->avail() > 0 && value_.is_empty() && !this->fail()) {
+      streamsize parsed = this->parse_some(p_is_->begin(), p_is_->avail());
+      if (!this->fail()) {
+        p_is_->extract(parsed);
+        p_is_->readsome_if_empty();  
+      }
+    }
+    if (!value_.is_empty()) {
+      p_is_->readsome_nonws();
+    }
+  }
+  return !value_.is_empty();
 }
 
 // jsonc_value methods
@@ -363,9 +391,10 @@ ijobject jsonc_value::do_begin_object()
 
 // factory function
 
-shared_ptr<ijsource_parser> make_jsonc_parser(shared_ptr<ijstate> const& p)
+shared_ptr<ijsource>
+    make_jsonc_parser(shared_ptr<istream_facade> const& p)
 {
-  return shared_ptr<ijsource_parser>(new jsonc_parser_node(p));
+  return shared_ptr<ijsource>(new jsonc_parser_node(p));
 }
 
 
