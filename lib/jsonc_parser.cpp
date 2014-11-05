@@ -299,8 +299,9 @@ void jsonc_parser_node::induce()
 bool jsonc_parser_node::do_ready()
 {
   if (value_.is_empty()) {
-    //BUG: can skip whitespace inside string
-    p_is_->readsome_nonws();
+    if (!parser_.expecting()) {
+      p_is_->readsome_nonws();
+    }
     while (p_is_->avail() > 0 && value_.is_empty() && !this->fail()) {
       const char * it = p_is_->begin();
       value_.reset(parser_.parse_some(it, p_is_->avail()));
@@ -308,12 +309,6 @@ bool jsonc_parser_node::do_ready()
       if (!parser_.expecting() && value_.is_empty()) {
         this->set_failbit();
       }
-      if (!this->fail()) {
-        p_is_->readsome_if_empty();  
-      }
-    }
-    if (!value_.is_empty()) {
-      p_is_->readsome_nonws();
     }
   }
   return !value_.is_empty() || !p_is_->good();

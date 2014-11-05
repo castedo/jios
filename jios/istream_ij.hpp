@@ -15,12 +15,9 @@ public:
   istream_facade(std::shared_ptr<std::istream> const& p_is);
   istream_facade(std::istream & is);
 
-  void peek()
+  char peek()
   {
-    BOOST_ASSERT(!bytes_avail_);
-    if (!bytes_avail_) {
-      p_is_->peek();
-    }
+    return (bytes_avail_ ? buf_[0] : p_is_->peek());
   }
 
   bool good() const { return !this->fail() && !this->eof(); }
@@ -33,11 +30,9 @@ public:
 
   const char * begin() const { return buf_.data(); }
 
-  std::streamsize avail() const { return bytes_avail_; }
+  std::streamsize avail();
 
   void readsome_nonws();
-
-  void readsome_if_empty();
 
   void remove(std::streamsize n);
 

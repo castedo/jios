@@ -212,3 +212,23 @@ BOOST_AUTO_TEST_CASE( async_test )
   BOOST_CHECK_EQUAL( i, 34567 );
 }
 
+BOOST_AUTO_TEST_CASE( dont_skip_ws_test )
+{
+  stringstream ss;
+  ijstream jin = json_in(ss);
+  ss << '"' << " hello";
+  BOOST_CHECK( !jin.ready() );
+  ss << " world ";
+  BOOST_CHECK( !jin.ready() );
+  ss << '"';
+  BOOST_CHECK( jin.ready() );
+
+  string rez;
+  jin >> rez;
+  BOOST_CHECK_EQUAL( rez, " hello world " );
+  BOOST_CHECK( !ss.fail() );
+  BOOST_CHECK( !ss.eof() );
+  BOOST_CHECK( !jin.ready() );
+  BOOST_CHECK( !ss.eof() );
+}
+

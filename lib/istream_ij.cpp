@@ -27,6 +27,14 @@ istream_facade::istream_facade(istream & is)
 {
 }
 
+streamsize istream_facade::avail()
+{
+  if (!bytes_avail_ && p_is_->good()) {
+    bytes_avail_ = p_is_->readsome(buf_.data(), buf_.size());
+  }
+  return bytes_avail_;
+}
+
 void istream_facade::readsome_nonws()
 {
   istream & is = *p_is_;
@@ -44,13 +52,6 @@ void istream_facade::readsome_nonws()
   }
   if (bytes_avail_ > 0 && it != buf_.data()) {
     copy(it, it + bytes_avail_, buf_.data());
-  }
-}
-
-void istream_facade::readsome_if_empty()
-{
-  if (!bytes_avail_) {
-    bytes_avail_ = p_is_->readsome(buf_.data(), buf_.size());
   }
 }
 
