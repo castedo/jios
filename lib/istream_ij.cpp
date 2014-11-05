@@ -54,7 +54,7 @@ void istream_facade::readsome_if_empty()
   }
 }
 
-void istream_facade::extract(streamsize n)
+void istream_facade::remove(streamsize n)
 {
   bytes_avail_ -= n;
   if (bytes_avail_ > 0) {

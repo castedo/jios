@@ -315,6 +315,41 @@ ijstreamoid & ijstreamoid::operator = (ijstreamoid && rhs)
   return *this;
 }
 
+// ijsource
+
+ijpair & ijsource::dereference()
+{
+  BOOST_ASSERT(!this->fail());
+  BOOST_ASSERT(!this->is_terminator());
+  return do_ref();
+}
+
+bool ijsource::is_terminator()
+{
+  BOOST_ASSERT(!this->fail());
+  return do_is_terminator() || this->fail();
+}
+
+void ijsource::advance()
+{
+  BOOST_ASSERT(!this->fail());
+  do_advance();
+}
+
+bool ijsource::ready()
+{
+  bool ret = do_ready();
+  BOOST_ASSERT( !this->fail() || ret );
+  return do_ready() || this->fail();
+}
+
+bool ijsource::expecting()
+{
+  bool ret = !do_ready();
+  BOOST_ASSERT( !this->fail() || !ret );
+  return !do_ready() && !this->fail();
+}
+
 
 } // namespace
 

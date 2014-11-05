@@ -300,11 +300,12 @@ public:
   void set_failbit() { do_state().set_failbit(); }
   ijstate & state() { return do_state(); }
   ijstate const& state() const { return do_state(); }
-  ijpair & dereference() { return do_ref(); }
-  bool is_terminator() { return do_is_terminator(); }
-  void advance() { do_advance(); }
+  ijpair & dereference();
+  bool is_terminator();
+  void advance();
   bool hint_multiline() { return do_hint_multiline(); }
-  bool ready() { return do_ready(); }
+  bool ready();
+  bool expecting();
 };
 
 ////////////////////////////////////////

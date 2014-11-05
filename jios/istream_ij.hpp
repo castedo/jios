@@ -17,9 +17,15 @@ public:
 
   void peek() { p_is_->peek(); }
 
-  bool good() { return p_is_->good(); }
+  bool good() const { return p_is_->good(); }
 
-  const char * begin() { return buf_.data(); }
+  bool eof() const
+  {
+    BOOST_ASSERT(!bytes_avail_ || !p_is_->eof());
+    return p_is_->eof();
+  }
+
+  const char * begin() const { return buf_.data(); }
 
   std::streamsize avail() const { return bytes_avail_; }
 
@@ -27,7 +33,7 @@ public:
 
   void readsome_if_empty();
 
-  void extract(std::streamsize n);
+  void remove(std::streamsize n);
 
 private:
   std::shared_ptr<std::istream> p_is_;

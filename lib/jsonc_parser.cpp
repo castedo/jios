@@ -180,6 +180,76 @@ void jsonc_object_ijsource::do_advance()
   init();
 }
 
+// jsonc_parser_facade
+
+class jsonc_parser_facade
+{
+  json_tokener * const p_toky_;
+  json_tokener_error tok_err_;
+
+public:
+  jsonc_parser_facade()
+    : p_toky_(json_tokener_new())
+    , tok_err_(json_tokener_success)
+  {
+    if (!p_toky_) {
+      BOOST_THROW_EXCEPTION(bad_alloc());
+    }
+  }
+
+  ~jsonc_parser_facade()
+  {
+    if (p_toky_) {
+      json_tokener_free(p_toky_);
+    }
+  }
+
+  //! Expecting means more calls to parse_some or induce_parse
+  //! are expected to complete partial parsing.
+  bool expecting() { return tok_err_ == json_tokener_continue; }
+
+  //! Either parse_some return an object or expecting is true.
+  //! Return of nullptr with expecting() returning false means error.
+  //! On success pointer 'it' is incremented by chars parsed.
+  json_object * parse_some(const char * & it, streamsize len);
+
+  //! Call only when expecting
+  //! Return of nullptr means error.
+  json_object * induce_parse();
+};
+
+json_object * jsonc_parser_facade::parse_some(const char * & it, streamsize n)
+{
+  json_object * ret = json_tokener_parse_ex(p_toky_, it, n);
+  tok_err_ = json_tokener_get_error(p_toky_);
+  if (tok_err_ != json_tokener_continue && tok_err_ != json_tokener_success) {
+    json_tokener_reset(p_toky_);
+  }
+  if (p_toky_->char_offset > 0) {
+    it += p_toky_->char_offset;
+  } else {
+    BOOST_ASSERT(!ret);
+    ret = nullptr;
+  }
+  return ret;
+}
+
+json_object * jsonc_parser_facade::induce_parse()
+{
+  BOOST_ASSERT(tok_err_ == json_tokener_continue);
+  json_object * ret = nullptr;
+  if (tok_err_ == json_tokener_continue) {
+    ret = json_tokener_parse_ex(p_toky_, "", -1);
+    tok_err_ = json_tokener_get_error(p_toky_);
+    if (tok_err_ != json_tokener_success) {
+      json_tokener_reset(p_toky_);
+    }
+    BOOST_ASSERT( bool(ret) == (tok_err_ == json_tokener_success) );
+  }
+  return ret;
+}
+
+
 // jsonc_parser_node
 
 class jsonc_parser_node : public ijsource
@@ -187,19 +257,10 @@ class jsonc_parser_node : public ijsource
 public:
   jsonc_parser_node(shared_ptr<istream_facade> const& p_is)
     : p_is_(p_is)
-    , p_toky_(json_tokener_new())
-    , tok_err_(json_tokener_success)
     , value_(p_is)
   {
-    if (!p_toky_ || !p_is) {
+    if (!p_is) {
       BOOST_THROW_EXCEPTION(bad_alloc());
-    }
-  }
-
-  ~jsonc_parser_node() override
-  {
-    if (p_toky_) {
-      json_tokener_free(p_toky_);
     }
   }
 
@@ -217,38 +278,17 @@ private:
 
   bool do_ready() override;
 
-  streamsize parse_some(const char* p, streamsize n);
-
   shared_ptr<istream_facade> p_is_;
-  json_tokener * const p_toky_;
-  json_tokener_error tok_err_;
+  jsonc_parser_facade parser_;
   jsonc_value value_;
 };
 
-streamsize jsonc_parser_node::parse_some(const char* buf, streamsize len)
-{
-  value_.reset(json_tokener_parse_ex(p_toky_, buf, len));
-  tok_err_ = json_tokener_get_error(p_toky_);
-  if (tok_err_ != json_tokener_continue && tok_err_ != json_tokener_success) {
-    value_.set_failbit();
-    json_tokener_reset(p_toky_);
-  }
-  if (p_toky_->char_offset <= 0) {
-    BOOST_ASSERT(value_.fail());
-    value_.set_failbit();
-    return 0;
-  }
-  return p_toky_->char_offset;
-}
-
 void jsonc_parser_node::induce()
 {
-  if (tok_err_ == json_tokener_continue) {
-    value_.reset(json_tokener_parse_ex(p_toky_, "", -1));
-    tok_err_ = json_tokener_get_error(p_toky_);
-    if (tok_err_ != json_tokener_success) {
-      value_.set_failbit();
-      json_tokener_reset(p_toky_);
+  if (parser_.expecting()) {
+    value_.reset(parser_.induce_parse());
+    if (value_.is_empty()) {
+      this->set_failbit();
     }
   }
 }
@@ -259,9 +299,13 @@ bool jsonc_parser_node::do_ready()
     //BUG: can skip whitespace inside string
     p_is_->readsome_nonws();
     while (p_is_->avail() > 0 && value_.is_empty() && !this->fail()) {
-      streamsize parsed = this->parse_some(p_is_->begin(), p_is_->avail());
+      const char * it = p_is_->begin();
+      value_.reset(parser_.parse_some(it, p_is_->avail()));
+      p_is_->remove(it - p_is_->begin());
+      if (!parser_.expecting() && value_.is_empty()) {
+        this->set_failbit();
+      }
       if (!this->fail()) {
-        p_is_->extract(parsed);
         p_is_->readsome_if_empty();  
       }
     }
