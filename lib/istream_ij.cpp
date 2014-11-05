@@ -57,6 +57,8 @@ void istream_facade::readsome_nonws()
 
 void istream_facade::remove(streamsize n)
 {
+  BOOST_ASSERT( n <= bytes_avail_ );
+  if (n > bytes_avail_) { n = bytes_avail_; }
   bytes_avail_ -= n;
   if (bytes_avail_ > 0) {
     char const* rest = buf_.data() + n;

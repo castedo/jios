@@ -92,7 +92,7 @@ protected:
     return value_.is_empty();
   }
 
-  bool do_ready() override { return true; }
+  bool do_expecting() override { return false; }
 
   jsonc_value value_;
   json_object * const p_parent_;
@@ -276,7 +276,7 @@ private:
 
   void do_advance() override { induce(); value_.reset(); }
 
-  bool do_ready() override;
+  bool do_expecting() override;
 
   shared_ptr<istream_facade> p_is_;
   jsonc_parser_facade parser_;
@@ -296,7 +296,7 @@ void jsonc_parser_node::induce()
   }
 }
 
-bool jsonc_parser_node::do_ready()
+bool jsonc_parser_node::do_expecting()
 {
   if (value_.is_empty()) {
     if (!parser_.expecting()) {
@@ -311,7 +311,7 @@ bool jsonc_parser_node::do_ready()
       }
     }
   }
-  return !value_.is_empty() || !p_is_->good();
+  return value_.is_empty() && p_is_->good();
 }
 
 // jsonc_value methods

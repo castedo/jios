@@ -49,6 +49,7 @@ public:
   bool at_end();
 
   bool ready();
+  bool expecting();
 
   bool hint_multiline() const;
 
@@ -289,7 +290,7 @@ class ijsource
   virtual bool do_is_terminator() = 0;
   virtual void do_advance() = 0;
   virtual bool do_hint_multiline() const { return false; }
-  virtual bool do_ready() = 0;
+  virtual bool do_expecting() = 0;
 
   bool is_terminator_or_failed();
 

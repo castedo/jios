@@ -44,10 +44,16 @@ void ijstreamoid::unexpire()
   }
 }
 
+bool ijstreamoid::expecting()
+{
+  unexpire();
+  return pimpl_->expecting();
+}
+
 bool ijstreamoid::ready()
 {
   unexpire();
-  return pimpl_->do_ready();
+  return pimpl_->ready();
 }
 
 ijpair & ijstreamoid::dereference()
@@ -286,7 +292,7 @@ private:
   }
   bool do_hint_multiline() const override { debug(); return false; }
   void do_advance() override { debug(); }
-  bool do_ready() override { debug(); return false; }
+  bool do_expecting() override { debug(); return false; }
   bool do_is_terminator() override { return true; }
   string do_key() const override { debug(); return string(); }
 };
@@ -338,16 +344,16 @@ void ijsource::advance()
 
 bool ijsource::ready()
 {
-  bool ret = do_ready();
+  bool ret = !do_expecting();
   BOOST_ASSERT( !this->fail() || ret );
-  return do_ready() || this->fail();
+  return ret || this->fail();
 }
 
 bool ijsource::expecting()
 {
-  bool ret = !do_ready();
+  bool ret = do_expecting();
   BOOST_ASSERT( !this->fail() || !ret );
-  return !do_ready() && !this->fail();
+  return ret && !this->fail();
 }
 
 

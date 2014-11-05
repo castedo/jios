@@ -26,7 +26,7 @@ private:
   ijpair & do_ref() override;
   bool do_is_terminator() override;
   void do_advance() override;
-  bool do_ready() override;
+  bool do_expecting() override;
 
   shared_ptr<ijsource> p_parser_;
 };
@@ -46,9 +46,9 @@ void jsonc_root_ijnode::do_advance()
   p_parser_->advance();
 }
 
-bool jsonc_root_ijnode::do_ready()
+bool jsonc_root_ijnode::do_expecting()
 {
-  return p_parser_->ready();
+  return p_parser_->expecting();
 }
 
 // factory functions
