@@ -32,9 +32,10 @@ public:
 
   std::streamsize avail();
 
-  void readsome_nonws();
+  void eat_whitespace();
 
   void remove(std::streamsize n);
+  void remove_until(const char * it);
 
 private:
   std::shared_ptr<std::istream> p_is_;

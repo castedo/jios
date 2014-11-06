@@ -300,12 +300,12 @@ bool jsonc_parser_node::do_expecting()
 {
   if (value_.is_empty()) {
     if (!parser_.expecting()) {
-      p_is_->readsome_nonws();
+      p_is_->eat_whitespace();
     }
     while (p_is_->avail() > 0 && value_.is_empty() && !this->fail()) {
       const char * it = p_is_->begin();
       value_.reset(parser_.parse_some(it, p_is_->avail()));
-      p_is_->remove(it - p_is_->begin());
+      p_is_->remove_until(it);
       if (!parser_.expecting() && value_.is_empty()) {
         this->set_failbit();
       }

@@ -322,7 +322,9 @@ ijpair & ijsource::dereference()
 
 bool ijsource::is_terminator()
 {
-  return do_is_terminator() || this->fail();
+  bool ret = do_is_terminator();
+  BOOST_ASSERT( !this->fail() || ret );
+  return ret || this->fail();
 }
 
 void ijsource::advance()

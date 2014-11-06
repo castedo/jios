@@ -70,7 +70,7 @@ bool split_ijsource::do_expecting()
 bool split_ijsource::chosen()
 {
   if (!choice_done_) {
-    p_in_->readsome_nonws();
+    p_in_->eat_whitespace();
     streamsize num = p_in_->avail();
     if (num > 0) {
       char next_nonws = *(p_in_->begin());

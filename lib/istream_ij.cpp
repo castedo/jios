@@ -35,7 +35,7 @@ streamsize istream_facade::avail()
   return bytes_avail_;
 }
 
-void istream_facade::readsome_nonws()
+void istream_facade::eat_whitespace()
 {
   istream & is = *p_is_;
   if (!bytes_avail_ && is.good()) {
@@ -64,6 +64,11 @@ void istream_facade::remove(streamsize n)
     char const* rest = buf_.data() + n;
     copy(rest, rest + bytes_avail_, buf_.data());
   }
+}
+
+void istream_facade::remove_until(const char * it)
+{
+  remove(it - buf_.data());
 }
 
 shared_ptr<ijsource>
