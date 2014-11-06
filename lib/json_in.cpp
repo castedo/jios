@@ -8,54 +8,98 @@ using namespace std;
 namespace jios {
 
 
-class jsonc_root_ijnode : public ijsource
+class split_ijsource : public ijsource
 {
 public:
-  jsonc_root_ijnode(shared_ptr<istream> const& p_is)
-    : p_parser_(make_jsonc_parser(make_shared<istream_facade>(p_is)))
+  split_ijsource(shared_ptr<istream> const& p_is)
+    : p_in_(new istream_facade(p_is))
+    , choice_done_(false)
+    , use_alt_(false)
   {
-    if (!p_parser_) {
-      BOOST_THROW_EXCEPTION(bad_alloc());
-    }
   }
 
 private:
-  ijstate & do_state() override { return p_parser_->state(); }
-  ijstate const& do_state() const override { return p_parser_->state(); }
+  ijstate & do_state() override { return *p_in_; }
+  ijstate const& do_state() const override { return *p_in_; }
 
   ijpair & do_ref() override;
   bool do_is_terminator() override;
   void do_advance() override;
   bool do_expecting() override;
 
-  shared_ptr<ijsource> p_parser_;
+  bool chosen();
+  ijsource & choice();
+
+  shared_ptr<istream_facade> p_in_;
+  shared_ptr<ijsource> p_default_;
+  shared_ptr<ijsource> p_alt_;
+  bool choice_done_;
+  bool use_alt_;
 };
 
-ijpair & jsonc_root_ijnode::do_ref()
+ijpair & split_ijsource::do_ref()
 {
-  return p_parser_->dereference();
+  return this->choice().dereference();
 }
 
-bool jsonc_root_ijnode::do_is_terminator()
+bool split_ijsource::do_is_terminator()
 {
-  return p_parser_->is_terminator();
+  return this->choice().is_terminator();
 }
 
-void jsonc_root_ijnode::do_advance()
+void split_ijsource::do_advance()
 {
-  p_parser_->advance();
+  this->choice().advance();
+  choice_done_ = false;
+  use_alt_ = false;
 }
 
-bool jsonc_root_ijnode::do_expecting()
+bool split_ijsource::do_expecting()
 {
-  return p_parser_->expecting();
+  if (!p_in_->good()) return false;
+  if (!chosen()) return true;
+  return this->choice().expecting();
+}
+
+bool split_ijsource::chosen()
+{
+  if (!choice_done_) {
+    p_in_->readsome_nonws();
+    streamsize num = p_in_->avail();
+    if (num > 0) {
+      char next_nonws = *(p_in_->begin());
+      use_alt_ = (next_nonws == '[');
+      choice_done_ = true;
+    }
+  }
+  return choice_done_;
+}
+
+ijsource & split_ijsource::choice()
+{
+  while (!chosen() && p_in_->good()) {
+    p_in_->peek();
+  }
+  if (use_alt_) {
+    if (!p_alt_) {
+      p_alt_ = make_jsonc_parser(p_in_);
+      if (!p_alt_) { BOOST_THROW_EXCEPTION(bad_alloc()); }
+    }
+    return *p_alt_;
+  } else {
+    if (!p_default_) {
+      p_default_ = make_jsonc_parser(p_in_);
+      if (!p_default_) { BOOST_THROW_EXCEPTION(bad_alloc()); }
+    }
+    return *p_default_;
+  }
 }
 
 // factory functions
 
 ijstream json_in(shared_ptr<istream> const& p_is)
 {
-  return shared_ptr<ijsource>(new jsonc_root_ijnode(p_is));
+  return shared_ptr<ijsource>(new split_ijsource(p_is));
 }
 
 ijstream json_in(istream & is)
