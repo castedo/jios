@@ -19,7 +19,7 @@ ijvalue const& ijstream::peek()
 
 void ijstreamoid::null_if_end(ijstreamoid * & p_src)
 {
-  if (p_src->pimpl_->is_terminator_or_failed()) {
+  if (p_src->pimpl_->is_terminator() || p_src->fail()) {
     p_src = nullptr;
   }
 }
@@ -27,19 +27,14 @@ void ijstreamoid::null_if_end(ijstreamoid * & p_src)
 void ijstreamoid::increment(ijstreamoid * & p_src)
 {
   p_src->unexpire();
-  p_src->pimpl_->do_advance();
+  p_src->pimpl_->advance();
   null_if_end(p_src);
-}
-
-bool ijsource::is_terminator_or_failed()
-{
-  return do_is_terminator() || do_state().fail();
 }
 
 void ijstreamoid::unexpire()
 {
   if (expired_) {
-    pimpl_->do_advance();
+    pimpl_->advance();
     expired_ = false;
   }
 }
@@ -50,17 +45,12 @@ bool ijstreamoid::expecting()
   return pimpl_->expecting();
 }
 
-bool ijstreamoid::ready()
-{
-  unexpire();
-  return pimpl_->ready();
-}
-
 ijpair & ijstreamoid::dereference()
 {
   unexpire();
-  BOOST_ASSERT(!pimpl_->is_terminator_or_failed());
-  return pimpl_->do_ref();
+  BOOST_ASSERT(!this->fail());
+  BOOST_ASSERT(!pimpl_->is_terminator());
+  return pimpl_->dereference();
 }
 
 ijpair & ijstreamoid::extract()
@@ -152,7 +142,7 @@ void jios_read(ijvalue & ij, double & dest)
 bool ijstreamoid::at_end()
 {
   unexpire();
-  return pimpl_->is_terminator_or_failed();
+  return pimpl_->is_terminator() || this->fail();
 }
 
 template<typename T>
@@ -332,7 +322,6 @@ ijpair & ijsource::dereference()
 
 bool ijsource::is_terminator()
 {
-  BOOST_ASSERT(!this->fail());
   return do_is_terminator() || this->fail();
 }
 
@@ -340,13 +329,6 @@ void ijsource::advance()
 {
   BOOST_ASSERT(!this->fail());
   do_advance();
-}
-
-bool ijsource::ready()
-{
-  bool ret = !do_expecting();
-  BOOST_ASSERT( !this->fail() || ret );
-  return ret || this->fail();
 }
 
 bool ijsource::expecting()

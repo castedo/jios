@@ -48,7 +48,6 @@ public:
 
   bool at_end();
 
-  bool ready();
   bool expecting();
 
   bool hint_multiline() const;
@@ -282,8 +281,6 @@ private:
 class ijsource
   : boost::noncopyable
 {
-  friend class ijstreamoid;
-
   virtual ijstate & do_state() = 0;
   virtual ijstate const& do_state() const = 0;
   virtual ijpair & do_ref() = 0;
@@ -291,8 +288,6 @@ class ijsource
   virtual void do_advance() = 0;
   virtual bool do_hint_multiline() const { return false; }
   virtual bool do_expecting() = 0;
-
-  bool is_terminator_or_failed();
 
 public:
   virtual ~ijsource() {}
@@ -305,7 +300,6 @@ public:
   bool is_terminator();
   void advance();
   bool hint_multiline() { return do_hint_multiline(); }
-  bool ready();
   bool expecting();
 };
 
@@ -314,12 +308,12 @@ public:
 
 inline bool ijstreamoid::fail() const
 {
-  return pimpl_->do_state().fail();
+  return pimpl_->fail();
 }
 
 inline void ijstreamoid::set_failbit()
 {
-  pimpl_->do_state().set_failbit();
+  pimpl_->set_failbit();
 }
 
 template<typename T>
@@ -343,7 +337,7 @@ ijobject & ijobject::operator >> (std::tuple<KeyT &, ValT &> const& dest)
 
 inline bool ijstreamoid::hint_multiline() const
 { 
-  return pimpl_->do_hint_multiline();
+  return pimpl_->hint_multiline();
 }
 
 inline bool ijpair::parse_key(std::string & dest) const
