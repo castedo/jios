@@ -11,8 +11,8 @@ namespace jios {
 class split_ijsource : public ijsource
 {
 public:
-  split_ijsource(shared_ptr<istream> const& p_is)
-    : p_in_(new istream_facade(p_is))
+  split_ijsource(shared_ptr<istream_facade> const& p_is)
+    : p_in_(p_is)
     , choice_done_(false)
     , use_alt_(false)
   {
@@ -36,6 +36,12 @@ private:
   bool choice_done_;
   bool use_alt_;
 };
+
+shared_ptr<ijsource>
+    make_split_ijsource(shared_ptr<istream_facade> const& p_is)
+{
+  return shared_ptr<ijsource>(new split_ijsource(p_is));
+}
 
 ijpair & split_ijsource::do_ref()
 {
@@ -82,7 +88,9 @@ ijsource & split_ijsource::choice()
   }
   if (use_alt_) {
     if (!p_alt_) {
-      p_alt_ = make_jsonc_parser(p_in_);
+//      istream_ijsource_factory factory = &make_split_ijsource;
+      istream_ijsource_factory factory = &make_jsonc_parser;
+      p_alt_ = make_array_ijsource(p_in_, factory);
       if (!p_alt_) { BOOST_THROW_EXCEPTION(bad_alloc()); }
     }
     return *p_alt_;
@@ -99,7 +107,7 @@ ijsource & split_ijsource::choice()
 
 ijstream json_in(shared_ptr<istream> const& p_is)
 {
-  return shared_ptr<ijsource>(new split_ijsource(p_is));
+  return make_split_ijsource(make_shared<istream_facade>(p_is));
 }
 
 ijstream json_in(istream & is)

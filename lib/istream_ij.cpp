@@ -66,6 +66,13 @@ void istream_facade::remove(streamsize n)
   }
 }
 
+shared_ptr<ijsource>
+    make_array_ijsource(shared_ptr<istream_facade> const& p_is,
+                        istream_ijsource_factory const& factory)
+{
+  return factory(p_is);
+}
+
 
 } // namespace
 

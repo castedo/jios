@@ -56,6 +56,16 @@ private:
   }
 };
 
+//! streaming JSON parser from istream source 
+
+typedef std::function<
+            std::shared_ptr<ijsource>(std::shared_ptr<istream_facade> const&)
+        > istream_ijsource_factory;
+
+std::shared_ptr<ijsource>
+    make_array_ijsource(std::shared_ptr<istream_facade> const&,
+                        istream_ijsource_factory const&);
+
 
 } // namespace jios
 
