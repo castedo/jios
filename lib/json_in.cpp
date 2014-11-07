@@ -31,6 +31,12 @@ private:
   bool use_alt_;
 };
 
+shared_ptr<istream_parser>
+    make_split_parser(shared_ptr<istream_facade> const& p_is)
+{
+  return shared_ptr<istream_parser>(new split_parser(p_is));
+}
+
 istream_parser * split_parser::try_choice() const
 {
   if (!choice_done_) return nullptr;
@@ -74,9 +80,8 @@ void split_parser::do_parse(shared_ptr<istream_facade> const& p_in)
   if (choice_done_) {
     if (use_alt_) {
       if (!p_alt_) {
-  //      istream_parser_factory factory = &make_split_parser;
-        istream_parser_factory factory = &make_jsonc_parser;
-        p_alt_ = make_streaming_parser(p_in, factory);
+        istream_parser_factory fallback = &make_split_parser;
+        p_alt_ = make_streaming_parser(p_in, fallback);
         if (!p_alt_) { BOOST_THROW_EXCEPTION(bad_alloc()); }
       }
       p_alt_->parse(p_in);
@@ -88,12 +93,6 @@ void split_parser::do_parse(shared_ptr<istream_facade> const& p_in)
       p_default_->parse(p_in);
     }
   }
-}
-
-shared_ptr<istream_parser>
-    make_split_parser(shared_ptr<istream_facade> const& p_is)
-{
-  return shared_ptr<istream_parser>(new split_parser(p_is));
 }
 
 // factory functions
