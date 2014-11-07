@@ -124,13 +124,94 @@ shared_ptr<ijsource>
   return make_shared<istream_ijsource>(p_is, p_p);
 }
 
-// array parser
+// streaming_node 
+
+class streaming_node : public ijpair
+{
+public:
+  streaming_node(shared_ptr<istream_facade> const& p_is,
+                 shared_ptr<istream_parser> const& p_p)
+    : p_is_(p_is)
+    , p_parser_(p_p)
+  {
+    if (!p_is_ || !p_parser_) {
+      BOOST_THROW_EXCEPTION(bad_alloc());
+    }
+  }
+
+private:
+  ijstate & do_state() override { return *p_is_; }
+  ijstate const& do_state() const override { return *p_is_; }
+
+  json_type do_type() const override { return json_type::jarray; }
+
+  void do_parse(int64_t &) override { failout(); }
+  void do_parse(double &) override { failout(); }
+  void do_parse(bool &) override { failout(); }
+  void do_parse(std::string &) override { failout(); }
+  void do_parse(buffer_iterator) override { failout(); }
+
+  ijarray do_begin_array() override;
+  ijobject do_begin_object() { failout(); return ijobject(); }
+
+  std::string do_key() const { BOOST_ASSERT(false); return ""; }
+
+  void failout() { this->set_failbit(); }
+
+  shared_ptr<istream_facade> p_is_;
+public:
+  shared_ptr<istream_parser> p_parser_;
+};
+
+ijarray streaming_node::do_begin_array()
+{
+  return p_parser_->result().array();
+}
+
+// streaming_parser
+
+class streaming_parser : public istream_parser
+{
+public:
+    streaming_parser(shared_ptr<istream_facade> const& p_is,
+                     istream_parser_factory const& fallback)
+      : node_(p_is, factory(p_is))
+    {}
+
+private:
+  void do_clear() override;
+  void do_parse(std::shared_ptr<istream_facade> const& p_is) override;
+  bool do_is_parsed() const override;
+  ijpair & do_result() override;
+
+  streaming_node node_;
+};
+
+void streaming_parser::do_clear()
+{
+  node_.p_parser_->clear();
+}
+
+void streaming_parser::do_parse(std::shared_ptr<istream_facade> const& p_is)
+{
+  node_.p_parser_->parse(p_is);
+}
+
+bool streaming_parser::do_is_parsed() const
+{
+  return node_.p_parser_->is_parsed();
+}
+
+ijpair & streaming_parser::do_result()
+{
+  return node_;
+}
 
 shared_ptr<istream_parser>
-    make_array_parser(shared_ptr<istream_facade> const& p_is,
-                      istream_parser_factory const& factory)
+    make_streaming_parser(shared_ptr<istream_facade> const& p_is,
+                          istream_parser_factory const& fallback)
 {
-  return factory(p_is);
+  return make_shared<streaming_parser>(p_is, fallback);
 }
 
 
