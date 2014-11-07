@@ -329,7 +329,7 @@ bool ijsource::is_terminator()
 
 void ijsource::advance()
 {
-  BOOST_ASSERT(!this->fail());
+  BOOST_ASSERT(!this->is_terminator());
   do_advance();
 }
 

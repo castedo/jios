@@ -204,9 +204,9 @@ public:
     }
   }
 
-  //! Expecting means more calls to parse_some or induce_parse
+  //! Parsing means more calls to parse_some or induce_parse
   //! are expected to complete partial parsing.
-  bool expecting() { return tok_err_ == json_tokener_continue; }
+  bool parsing() { return tok_err_ == json_tokener_continue; }
 
   //! Either parse_some return an object or expecting is true.
   //! Return of nullptr with expecting() returning false means error.
@@ -279,7 +279,7 @@ private:
   bool do_expecting() override;
 
   shared_ptr<istream_facade> p_is_;
-  jsonc_parser_facade parser_;
+  jsonc_parser_facade jsonc_;
   jsonc_value value_;
 };
 
@@ -288,27 +288,25 @@ void jsonc_parser_node::induce()
   while (this->expecting()) {
     p_is_->peek();
   }
-  if (parser_.expecting()) {
-    value_.reset(parser_.induce_parse());
-    if (value_.is_empty()) {
-      this->set_failbit();
-    }
-  }
 }
 
 bool jsonc_parser_node::do_expecting()
 {
-  if (value_.is_empty()) {
-    if (!parser_.expecting()) {
-      p_is_->eat_whitespace();
+  if (!jsonc_.parsing()) {
+    p_is_->eat_whitespace();
+  }
+  while (p_is_->avail() > 0 && value_.is_empty() && !this->fail()) {
+    const char * it = p_is_->begin();
+    value_.reset(jsonc_.parse_some(it, p_is_->avail()));
+    p_is_->remove_until(it);
+    if (!jsonc_.parsing() && value_.is_empty()) {
+      this->set_failbit();
     }
-    while (p_is_->avail() > 0 && value_.is_empty() && !this->fail()) {
-      const char * it = p_is_->begin();
-      value_.reset(parser_.parse_some(it, p_is_->avail()));
-      p_is_->remove_until(it);
-      if (!parser_.expecting() && value_.is_empty()) {
-        this->set_failbit();
-      }
+  }
+  if (p_is_->eof() && jsonc_.parsing()) {
+    value_.reset(jsonc_.induce_parse());
+    if (value_.is_empty()) {
+      this->set_failbit();
     }
   }
   return value_.is_empty() && p_is_->good();
