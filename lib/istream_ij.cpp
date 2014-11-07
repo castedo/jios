@@ -175,7 +175,7 @@ class streaming_parser : public istream_parser
 public:
     streaming_parser(shared_ptr<istream_facade> const& p_is,
                      istream_parser_factory const& fallback)
-      : node_(p_is, factory(p_is))
+      : node_(p_is, fallback(p_is))
     {}
 
 private:
