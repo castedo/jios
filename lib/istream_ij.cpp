@@ -78,6 +78,59 @@ shared_ptr<ijsource>
   return factory(p_is);
 }
 
+// istream_ijsource
+
+class istream_ijsource : public ijsource
+{
+public:
+  istream_ijsource(shared_ptr<istream_facade> const& p_is,
+                   shared_ptr<istream_parser> const& p_p)
+    : p_is_(p_is)
+    , p_parser_(p_p)
+  {
+    if (!p_is_ || !p_parser_) {
+      BOOST_THROW_EXCEPTION(bad_alloc());
+    }
+  }
+
+private:
+  void induce();
+
+  ijstate & do_state() override { return *p_is_; }
+  ijstate const& do_state() const override { return *p_is_; }
+
+  ijpair & do_ref() override { induce(); return p_parser_->result(); }
+
+  bool do_is_terminator() override { induce(); return !p_parser_->is_parsed(); }
+
+  void do_advance() override { induce(); p_parser_->clear(); }
+
+  bool do_expecting() override;
+
+  shared_ptr<istream_facade> p_is_;
+  shared_ptr<istream_parser> p_parser_;
+};
+
+void istream_ijsource::induce()
+{
+  while (this->expecting()) {
+    p_is_->peek();
+  }
+}
+
+bool istream_ijsource::do_expecting()
+{
+  p_parser_->parse(*p_is_);
+  return !p_parser_->is_parsed() && p_is_->good();
+}
+
+shared_ptr<ijsource>
+    make_stream_ijsource(shared_ptr<istream_facade> const& p_is,
+                         shared_ptr<istream_parser> const& p_p)
+{
+  return make_shared<istream_ijsource>(p_is, p_p);
+}
+
 
 } // namespace
 

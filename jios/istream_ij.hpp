@@ -59,9 +59,36 @@ private:
 
 //! streaming JSON parser from istream source 
 
+
+//! istream_parser
+//! Interface to classes that can repeat parsing of JSON values using
+//! istream_facade without any memory or context around those JSON values.
+
+class istream_parser
+{
+  virtual void do_clear() = 0;
+  virtual void do_parse(istream_facade & is) = 0;
+  virtual bool do_is_parsed() const = 0;
+  virtual ijpair & do_result() = 0;
+
+public:
+  void clear() { do_clear(); }
+  void parse(istream_facade & is) { do_parse(is); }
+  bool is_parsed() const { return do_is_parsed(); }
+  ijpair & result() { return do_result(); }
+};
+
+typedef std::function<
+    std::shared_ptr<istream_parser>(std::shared_ptr<istream_facade> const&)
+> istream_parser_factory;
+
 typedef std::function<
             std::shared_ptr<ijsource>(std::shared_ptr<istream_facade> const&)
         > istream_ijsource_factory;
+
+std::shared_ptr<ijsource>
+    make_stream_ijsource(std::shared_ptr<istream_facade> const&,
+                         std::shared_ptr<istream_parser> const&);
 
 std::shared_ptr<ijsource>
     make_array_ijsource(std::shared_ptr<istream_facade> const&,

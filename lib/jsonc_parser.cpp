@@ -208,6 +208,9 @@ public:
   //! are expected to complete partial parsing.
   bool parsing() { return tok_err_ == json_tokener_continue; }
 
+  //! Reinitialize parser to initial state for fresh new parsing.
+  void clear();
+
   //! Either parse_some return an object or expecting is true.
   //! Return of nullptr with expecting() returning false means error.
   //! On success pointer 'it' is incremented by chars parsed.
@@ -217,6 +220,12 @@ public:
   //! Return of nullptr means error.
   json_object * induce_parse();
 };
+
+void jsonc_parser_facade::clear()
+{
+  json_tokener_reset(p_toky_);
+  tok_err_ = json_tokener_success;
+}
 
 json_object * jsonc_parser_facade::parse_some(const char * & it, streamsize n)
 {
@@ -249,15 +258,13 @@ json_object * jsonc_parser_facade::induce_parse()
   return ret;
 }
 
+// jsonc_istream_parser
 
-// jsonc_parser_node
-
-class jsonc_parser_node : public ijsource
+class jsonc_istream_parser : public istream_parser
 {
 public:
-  jsonc_parser_node(shared_ptr<istream_facade> const& p_is)
-    : p_is_(p_is)
-    , value_(p_is)
+  jsonc_istream_parser(shared_ptr<ijstate> const& p_is)
+    : value_(p_is)
   {
     if (!p_is) {
       BOOST_THROW_EXCEPTION(bad_alloc());
@@ -265,51 +272,40 @@ public:
   }
 
 private:
-  void induce();
+  void do_clear() override;
+  void do_parse(istream_facade & is) override;
+  bool do_is_parsed() const override { return !value_.is_empty(); }
+  ijpair & do_result() override { return value_; }
 
-  ijstate & do_state() override { return value_.state(); }
-  ijstate const& do_state() const override { return value_.state(); }
-
-  ijpair & do_ref() override { induce(); return value_; }
-
-  bool do_is_terminator() override { induce(); return value_.is_empty(); }
-
-  void do_advance() override { induce(); value_.reset(); }
-
-  bool do_expecting() override;
-
-  shared_ptr<istream_facade> p_is_;
   jsonc_parser_facade jsonc_;
   jsonc_value value_;
 };
 
-void jsonc_parser_node::induce()
+void jsonc_istream_parser::do_clear()
 {
-  while (this->expecting()) {
-    p_is_->peek();
-  }
+  jsonc_.clear();
+  value_.reset();
 }
 
-bool jsonc_parser_node::do_expecting()
+void jsonc_istream_parser::do_parse(istream_facade & is)
 {
   if (!jsonc_.parsing()) {
-    p_is_->eat_whitespace();
+    is.eat_whitespace();
   }
-  while (p_is_->avail() > 0 && value_.is_empty() && !this->fail()) {
-    const char * it = p_is_->begin();
-    value_.reset(jsonc_.parse_some(it, p_is_->avail()));
-    p_is_->remove_until(it);
+  while (is.avail() > 0 && value_.is_empty() && !is.fail()) {
+    const char * it = is.begin();
+    value_.reset(jsonc_.parse_some(it, is.avail()));
+    is.remove_until(it);
     if (!jsonc_.parsing() && value_.is_empty()) {
-      this->set_failbit();
+      is.set_failbit();
     }
   }
-  if (p_is_->eof() && jsonc_.parsing()) {
+  if (is.eof() && jsonc_.parsing()) {
     value_.reset(jsonc_.induce_parse());
     if (value_.is_empty()) {
-      this->set_failbit();
+      is.set_failbit();
     }
   }
-  return value_.is_empty() && p_is_->good();
 }
 
 // jsonc_value methods
@@ -432,9 +428,10 @@ ijobject jsonc_value::do_begin_object()
 // factory function
 
 shared_ptr<ijsource>
-    make_jsonc_parser(shared_ptr<istream_facade> const& p)
+    make_jsonc_parser(shared_ptr<istream_facade> const& p_is)
 {
-  return shared_ptr<ijsource>(new jsonc_parser_node(p));
+  shared_ptr<istream_parser> p_p(new jsonc_istream_parser(p_is));
+  return make_stream_ijsource(p_is, p_p);
 }
 
 
