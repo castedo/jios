@@ -87,8 +87,8 @@ std::shared_ptr<ijsource>
                          std::shared_ptr<istream_parser> const&);
 
 std::shared_ptr<istream_parser>
-    make_array_parser(std::shared_ptr<istream_facade> const&,
-                      istream_parser_factory const&);
+    make_streaming_parser(std::shared_ptr<istream_facade> const&,
+                          istream_parser_factory const&);
 
 
 } // namespace jios

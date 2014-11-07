@@ -76,7 +76,7 @@ void split_parser::do_parse(shared_ptr<istream_facade> const& p_in)
       if (!p_alt_) {
   //      istream_parser_factory factory = &make_split_parser;
         istream_parser_factory factory = &make_jsonc_parser;
-        p_alt_ = make_array_parser(p_in, factory);
+        p_alt_ = make_streaming_parser(p_in, factory);
         if (!p_alt_) { BOOST_THROW_EXCEPTION(bad_alloc()); }
       }
       p_alt_->parse(p_in);
