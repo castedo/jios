@@ -19,7 +19,7 @@ public:
 BOOST_AUTO_TEST_CASE( parser_test )
 {
   stringstream ss;
-  ijstream ij(make_jsonc_parser(make_shared<istream_facade>(ss)));
+  ijstream ij(make_jsonc_ijsource(make_shared<istream_facade>(ss)));
 
   BOOST_CHECK( ij.expecting() );
   ss << "{}";

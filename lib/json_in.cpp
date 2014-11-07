@@ -8,105 +8,100 @@ using namespace std;
 namespace jios {
 
 
-class split_ijsource : public ijsource
+class split_parser : public istream_parser
 {
 public:
-  split_ijsource(shared_ptr<istream_facade> const& p_is)
-    : p_in_(p_is)
-    , choice_done_(false)
+  split_parser(shared_ptr<istream_facade> const& p_is)
+    : choice_done_(false)
     , use_alt_(false)
   {
   }
 
 private:
-  ijstate & do_state() override { return *p_in_; }
-  ijstate const& do_state() const override { return *p_in_; }
+  void do_clear() override;
+  void do_parse(shared_ptr<istream_facade> const&) override;
+  bool do_is_parsed() const override;
+  ijpair & do_result() override;
 
-  ijpair & do_ref() override;
-  bool do_is_terminator() override;
-  void do_advance() override;
-  bool do_expecting() override;
+  istream_parser * try_choice() const;
 
-  bool chosen();
-  ijsource & choice();
-
-  shared_ptr<istream_facade> p_in_;
-  shared_ptr<ijsource> p_default_;
-  shared_ptr<ijsource> p_alt_;
+  shared_ptr<istream_parser> p_default_;
+  shared_ptr<istream_parser> p_alt_;
   bool choice_done_;
   bool use_alt_;
 };
 
-shared_ptr<ijsource>
-    make_split_ijsource(shared_ptr<istream_facade> const& p_is)
+istream_parser * split_parser::try_choice() const
 {
-  return shared_ptr<ijsource>(new split_ijsource(p_is));
+  if (!choice_done_) return nullptr;
+  istream_parser * ret = (use_alt_  ? p_alt_.get() : p_default_.get());
+  BOOST_ASSERT(ret);
+  return ret;
 }
 
-ijpair & split_ijsource::do_ref()
+void split_parser::do_clear()
 {
-  return this->choice().dereference();
-}
-
-bool split_ijsource::do_is_terminator()
-{
-  return this->choice().is_terminator();
-}
-
-void split_ijsource::do_advance()
-{
-  this->choice().advance();
   choice_done_ = false;
   use_alt_ = false;
+  if (p_default_) { p_default_->clear(); } 
+  if (p_alt_) { p_alt_->clear(); } 
 }
 
-bool split_ijsource::do_expecting()
+ijpair & split_parser::do_result()
 {
-  if (!p_in_->good()) return false;
-  if (!chosen()) return true;
-  return this->choice().expecting();
+  istream_parser * p = try_choice();
+  if (!p) { BOOST_THROW_EXCEPTION(logic_error("result called when nothing parsed")); }
+  return p->result();
 }
 
-bool split_ijsource::chosen()
+bool split_parser::do_is_parsed() const
 {
+  istream_parser * p = try_choice();
+  return (p ? p->is_parsed() : false);
+}
+
+void split_parser::do_parse(shared_ptr<istream_facade> const& p_in)
+{
+  istream_facade & in = *p_in;
   if (!choice_done_) {
-    p_in_->eat_whitespace();
-    if (p_in_->avail()) {
-      char next_nonws = *(p_in_->begin());
+    in.eat_whitespace();
+    if (in.avail()) {
+      char next_nonws = *(in.begin());
       use_alt_ = (next_nonws == '[');
       choice_done_ = true;
     }
   }
-  return choice_done_;
+  if (choice_done_) {
+    if (use_alt_) {
+      if (!p_alt_) {
+  //      istream_parser_factory factory = &make_split_parser;
+        istream_parser_factory factory = &make_jsonc_parser;
+        p_alt_ = make_array_parser(p_in, factory);
+        if (!p_alt_) { BOOST_THROW_EXCEPTION(bad_alloc()); }
+      }
+      p_alt_->parse(p_in);
+    } else {
+      if (!p_default_) {
+        p_default_ = make_jsonc_parser(p_in);
+        if (!p_default_) { BOOST_THROW_EXCEPTION(bad_alloc()); }
+      }
+      p_default_->parse(p_in);
+    }
+  }
 }
 
-ijsource & split_ijsource::choice()
+shared_ptr<istream_parser>
+    make_split_parser(shared_ptr<istream_facade> const& p_is)
 {
-  while (!chosen() && p_in_->good()) {
-    p_in_->peek();
-  }
-  if (use_alt_) {
-    if (!p_alt_) {
-//      istream_ijsource_factory factory = &make_split_ijsource;
-      istream_ijsource_factory factory = &make_jsonc_parser;
-      p_alt_ = make_array_ijsource(p_in_, factory);
-      if (!p_alt_) { BOOST_THROW_EXCEPTION(bad_alloc()); }
-    }
-    return *p_alt_;
-  } else {
-    if (!p_default_) {
-      p_default_ = make_jsonc_parser(p_in_);
-      if (!p_default_) { BOOST_THROW_EXCEPTION(bad_alloc()); }
-    }
-    return *p_default_;
-  }
+  return shared_ptr<istream_parser>(new split_parser(p_is));
 }
 
 // factory functions
 
 ijstream json_in(shared_ptr<istream> const& p_is)
 {
-  return make_split_ijsource(make_shared<istream_facade>(p_is));
+  shared_ptr<istream_facade> p_f(new istream_facade(p_is));
+  return make_stream_ijsource(p_f, make_split_parser(p_f));
 }
 
 ijstream json_in(istream & is)

@@ -9,8 +9,11 @@ namespace jios {
 
 // factory function
 
-std::shared_ptr<ijsource>
+std::shared_ptr<istream_parser>
     make_jsonc_parser(std::shared_ptr<istream_facade> const&);
+
+std::shared_ptr<ijsource>
+    make_jsonc_ijsource(std::shared_ptr<istream_facade> const&);
 
 
 } // namespace jios

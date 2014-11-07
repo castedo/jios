@@ -273,7 +273,7 @@ public:
 
 private:
   void do_clear() override;
-  void do_parse(istream_facade & is) override;
+  void do_parse(shared_ptr<istream_facade> const& p_is) override;
   bool do_is_parsed() const override { return !value_.is_empty(); }
   ijpair & do_result() override { return value_; }
 
@@ -287,8 +287,9 @@ void jsonc_istream_parser::do_clear()
   value_.reset();
 }
 
-void jsonc_istream_parser::do_parse(istream_facade & is)
+void jsonc_istream_parser::do_parse(shared_ptr<istream_facade> const& p_is)
 {
+  istream_facade & is = *p_is;
   if (!jsonc_.parsing()) {
     is.eat_whitespace();
   }
@@ -427,11 +428,16 @@ ijobject jsonc_value::do_begin_object()
 
 // factory function
 
-shared_ptr<ijsource>
+shared_ptr<istream_parser>
     make_jsonc_parser(shared_ptr<istream_facade> const& p_is)
 {
-  shared_ptr<istream_parser> p_p(new jsonc_istream_parser(p_is));
-  return make_stream_ijsource(p_is, p_p);
+  return shared_ptr<istream_parser>(new jsonc_istream_parser(p_is));
+}
+
+shared_ptr<ijsource>
+    make_jsonc_ijsource(shared_ptr<istream_facade> const& p_is)
+{
+  return make_stream_ijsource(p_is, make_jsonc_parser(p_is));
 }
 
 

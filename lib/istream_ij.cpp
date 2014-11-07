@@ -71,13 +71,6 @@ void istream_facade::remove_until(const char * it)
   remove(it - buf_.data());
 }
 
-shared_ptr<ijsource>
-    make_array_ijsource(shared_ptr<istream_facade> const& p_is,
-                        istream_ijsource_factory const& factory)
-{
-  return factory(p_is);
-}
-
 // istream_ijsource
 
 class istream_ijsource : public ijsource
@@ -120,7 +113,7 @@ void istream_ijsource::induce()
 
 bool istream_ijsource::do_expecting()
 {
-  p_parser_->parse(*p_is_);
+  p_parser_->parse(p_is_);
   return !p_parser_->is_parsed() && p_is_->good();
 }
 
@@ -129,6 +122,15 @@ shared_ptr<ijsource>
                          shared_ptr<istream_parser> const& p_p)
 {
   return make_shared<istream_ijsource>(p_is, p_p);
+}
+
+// array parser
+
+shared_ptr<istream_parser>
+    make_array_parser(shared_ptr<istream_facade> const& p_is,
+                      istream_parser_factory const& factory)
+{
+  return factory(p_is);
 }
 
 
