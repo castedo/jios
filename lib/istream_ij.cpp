@@ -145,15 +145,115 @@ shared_ptr<ijsource>
   return make_shared<istream_stream_ijsource>(p_is, p_p);
 }
 
-// streaming_node 
+// istream_array_ijsource
 
-class streaming_node : public ijpair
+class istream_array_ijsource : public istream_ijsource
 {
 public:
-  streaming_node(shared_ptr<istream_facade> const& p_is,
-                 shared_ptr<istream_parser> const& p_p)
+  istream_array_ijsource(shared_ptr<istream_facade> const& p_is,
+                         shared_ptr<istream_parser> const& p_p)
+    : istream_ijsource(p_is, p_p)
+    , state_(parse_state::start)
+    , multiline_(false)
+  {}
+
+
+private:
+  bool do_is_terminator() override;
+  void do_advance() override;
+  bool do_expecting() override;
+  bool do_hint_multiline() const override { return multiline_; }
+
+  enum class parse_state {
+    start,
+    poststart,
+    value,
+    predelim,
+    finish
+  };
+
+  parse_state state_;
+  bool multiline_;
+};
+
+bool istream_array_ijsource::do_is_terminator()
+{
+  induce();
+  return state_ == parse_state::finish || this->fail();
+}
+
+void istream_array_ijsource::do_advance()
+{
+  induce();
+  BOOST_ASSERT(state_ != parse_state::finish);
+  BOOST_ASSERT(state_ == parse_state::value || this->fail());
+  p_parser_->clear();
+  if (state_ == parse_state::value) {
+    state_ = parse_state::predelim;
+  }
+}
+
+bool istream_array_ijsource::do_expecting()
+{
+  while (p_is_->avail()) {
+    char ch = *(p_is_->begin());
+    switch (state_) {
+      case parse_state::start:
+        if (ch == '[') {
+          p_is_->remove(1);
+          if (p_is_->avail()) {
+            ch = *(p_is_->begin());
+            multiline_ = (ch == '\n');
+          }
+          state_ = parse_state::poststart;
+        } else if (::isspace(ch)) {
+          p_is_-> remove(1);
+        } else {
+          this->set_failbit();
+        }
+        break;
+      case parse_state::poststart:
+        if (ch == ']') {
+          p_is_->remove(1);
+          state_ = parse_state::finish;
+        } else if (::isspace(ch)) {
+          p_is_->remove(1);
+        } else {
+          state_ = parse_state::value;
+        }
+        break;
+      case parse_state::value:
+        p_parser_->parse(p_is_);
+        return !p_parser_->is_parsed() && p_is_->good();
+      case parse_state::predelim:
+        if (ch == ']') {
+          p_is_->remove(1);
+          state_ = parse_state::finish;
+        } else if (ch == ',') {
+          p_is_->remove(1);
+          state_ = parse_state::value;
+        } else if (::isspace(ch)) {
+          p_is_->remove(1);
+        } else {
+          this->set_failbit();
+        }
+        break;
+      case parse_state::finish:
+        return false;
+    }
+  }
+  return state_ != parse_state::finish && p_is_->good();
+}
+
+// streaming_parser
+
+class streaming_parser : public istream_parser, private ijpair
+{
+public:
+  streaming_parser(shared_ptr<istream_facade> const& p_is,
+                   istream_parser_factory const& fallback)
     : p_is_(p_is)
-    , p_parser_(p_p)
+    , p_parser_(fallback(p_is))
   {
     if (!p_is_ || !p_parser_) {
       BOOST_THROW_EXCEPTION(bad_alloc());
@@ -161,6 +261,13 @@ public:
   }
 
 private:
+  // istream_parser virtual methods
+  void do_clear() override;
+  void do_parse(std::shared_ptr<istream_facade> const& p_is) override {}
+  bool do_is_parsed() const override { return true; }
+  ijpair & do_result() { return *this; }
+
+  // ijpair virtual methods
   ijstate & do_state() override { return *p_is_; }
   ijstate const& do_state() const override { return *p_is_; }
 
@@ -180,52 +287,24 @@ private:
   void failout() { this->set_failbit(); }
 
   shared_ptr<istream_facade> p_is_;
-public:
   shared_ptr<istream_parser> p_parser_;
-};
-
-ijarray streaming_node::do_begin_array()
-{
-  return p_parser_->result().array();
-}
-
-// streaming_parser
-
-class streaming_parser : public istream_parser
-{
-public:
-    streaming_parser(shared_ptr<istream_facade> const& p_is,
-                     istream_parser_factory const& fallback)
-      : node_(p_is, fallback(p_is))
-    {}
-
-private:
-  void do_clear() override;
-  void do_parse(std::shared_ptr<istream_facade> const& p_is) override;
-  bool do_is_parsed() const override;
-  ijpair & do_result() override;
-
-  streaming_node node_;
+  shared_ptr<ijsource> p_src_;
 };
 
 void streaming_parser::do_clear()
 {
-  node_.p_parser_->clear();
+  BOOST_ASSERT(p_src_ && p_src_->is_terminator());
+  //TODO: error check/set if parse partial
+  p_parser_->clear();
+  //TODO: re-use ijsource object instead of delete/free
+  p_src_.reset();
 }
 
-void streaming_parser::do_parse(std::shared_ptr<istream_facade> const& p_is)
+ijarray streaming_parser::do_begin_array()
 {
-  node_.p_parser_->parse(p_is);
-}
-
-bool streaming_parser::do_is_parsed() const
-{
-  return node_.p_parser_->is_parsed();
-}
-
-ijpair & streaming_parser::do_result()
-{
-  return node_;
+  BOOST_ASSERT(!p_src_);
+  p_src_.reset(new istream_array_ijsource(p_is_, p_parser_));
+  return p_src_;
 }
 
 shared_ptr<istream_parser>
