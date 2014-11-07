@@ -86,19 +86,12 @@ public:
     }
   }
 
-private:
-  void induce();
-
+protected:
   ijstate & do_state() override { return *p_is_; }
   ijstate const& do_state() const override { return *p_is_; }
-
   ijpair & do_ref() override { induce(); return p_parser_->result(); }
 
-  bool do_is_terminator() override { induce(); return !p_parser_->is_parsed(); }
-
-  void do_advance() override { induce(); p_parser_->clear(); }
-
-  bool do_expecting() override;
+  void induce();
 
   shared_ptr<istream_facade> p_is_;
   shared_ptr<istream_parser> p_parser_;
@@ -111,7 +104,35 @@ void istream_ijsource::induce()
   }
 }
 
-bool istream_ijsource::do_expecting()
+// istream_stream_ijsource
+
+class istream_stream_ijsource : public istream_ijsource
+{
+public:
+  istream_stream_ijsource(shared_ptr<istream_facade> const& p_is,
+                          shared_ptr<istream_parser> const& p_p)
+    : istream_ijsource(p_is, p_p)
+  {}
+
+private:
+  bool do_is_terminator() override;
+  void do_advance() override;
+  bool do_expecting() override;
+};
+
+bool istream_stream_ijsource::do_is_terminator()
+{
+  induce();
+  return !p_parser_->is_parsed();
+}
+
+void istream_stream_ijsource::do_advance()
+{
+  induce();
+  p_parser_->clear();
+}
+
+bool istream_stream_ijsource::do_expecting()
 {
   p_parser_->parse(p_is_);
   return !p_parser_->is_parsed() && p_is_->good();
@@ -121,7 +142,7 @@ shared_ptr<ijsource>
     make_stream_ijsource(shared_ptr<istream_facade> const& p_is,
                          shared_ptr<istream_parser> const& p_p)
 {
-  return make_shared<istream_ijsource>(p_is, p_p);
+  return make_shared<istream_stream_ijsource>(p_is, p_p);
 }
 
 // streaming_node 
