@@ -164,6 +164,8 @@ private:
   bool do_expecting() override;
   bool do_hint_multiline() const override { return multiline_; }
 
+  bool parse_char();
+
   enum class parse_state {
     start,
     poststart,
@@ -193,56 +195,69 @@ void istream_array_ijsource::do_advance()
   }
 }
 
+bool istream_array_ijsource::parse_char()
+{
+  BOOST_ASSERT(p_is_->avail());
+  char ch = *(p_is_->begin());
+  switch (state_) {
+    case parse_state::start:
+      if (::isspace(ch)) return true;
+      if (ch == '[') {
+        if (p_is_->avail()) {
+          ch = *(p_is_->begin());
+          multiline_ = (ch == '\n');
+        }
+        state_ = parse_state::poststart;
+        return true;
+      }
+      break;
+    case parse_state::poststart:
+      if (::isspace(ch)) return true;
+      if (ch == ']') {
+        state_ = parse_state::finish;
+        return true;
+      } else {
+        state_ = parse_state::value;
+        return false;
+      }
+      break;
+    case parse_state::value:
+      return false;
+    case parse_state::predelim:
+      if (::isspace(ch)) return true;
+      if (ch == ']') {
+        state_ = parse_state::finish;
+        return true;
+      } else if (ch == ',') {
+        state_ = parse_state::value;
+        return true;
+      }
+      break;
+    case parse_state::finish:
+      return false;
+  }
+  this->set_failbit();
+  return false;
+}
+
 bool istream_array_ijsource::do_expecting()
 {
-  while (p_is_->avail()) {
-    char ch = *(p_is_->begin());
-    switch (state_) {
-      case parse_state::start:
-        if (ch == '[') {
-          p_is_->remove(1);
-          if (p_is_->avail()) {
-            ch = *(p_is_->begin());
-            multiline_ = (ch == '\n');
-          }
-          state_ = parse_state::poststart;
-        } else if (::isspace(ch)) {
-          p_is_-> remove(1);
-        } else {
-          this->set_failbit();
-        }
-        break;
-      case parse_state::poststart:
-        if (ch == ']') {
-          p_is_->remove(1);
-          state_ = parse_state::finish;
-        } else if (::isspace(ch)) {
-          p_is_->remove(1);
-        } else {
-          state_ = parse_state::value;
-        }
-        break;
-      case parse_state::value:
-        p_parser_->parse(p_is_);
-        return !p_parser_->is_parsed() && p_is_->good();
-      case parse_state::predelim:
-        if (ch == ']') {
-          p_is_->remove(1);
-          state_ = parse_state::finish;
-        } else if (ch == ',') {
-          p_is_->remove(1);
-          state_ = parse_state::value;
-        } else if (::isspace(ch)) {
-          p_is_->remove(1);
-        } else {
-          this->set_failbit();
-        }
-        break;
-      case parse_state::finish:
-        return false;
-    }
+  while (p_is_->avail() && parse_char()) {
+    p_is_->remove(1);
   }
-  return state_ != parse_state::finish && p_is_->good();
+  if (p_is_->eof()) {
+    this->set_failbit();
+  }
+  switch (state_) {
+    case parse_state::value:
+      p_parser_->parse(p_is_);
+      return !p_parser_->is_parsed() && p_is_->good();
+    case parse_state::finish:
+      return false;
+    default:
+      break;
+  }
+  return p_is_->good();
 }
 
 // streaming_parser

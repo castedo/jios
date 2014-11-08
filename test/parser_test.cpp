@@ -1,20 +1,48 @@
 #include <boost/test/unit_test.hpp>
 
 #include <jios/jsonc_parser.hpp>
+#include <jios/json_in.hpp>
 
 using namespace std;
 using namespace jios;
 
-class simple_ijstate : public ijstate
+BOOST_AUTO_TEST_CASE( incremental_array_parse)
 {
-  bool failed_;
+  stringstream ss;
+  ijstream jin = json_in(ss);
+  int i = 0;
 
-  virtual bool do_get_failbit() const { return failed_; }
-  virtual void do_set_failbit() { failed_ = true; }
+  BOOST_CHECK( jin.expecting() );
+  ss << "1 ";
+  BOOST_CHECK( !jin.expecting() );
+  jin >> i;
+  BOOST_CHECK_EQUAL( i, 1 );
 
-public:
-  simple_ijstate() : failed_(false) {}
-};
+  ss << "[";
+  BOOST_CHECK( !jin.expecting() );
+  ijarray ija = jin.get().array();
+  BOOST_CHECK( ija.expecting() );
+  
+  ss << " 2 ";
+  BOOST_CHECK( !ija.expecting() );
+  BOOST_CHECK_EQUAL( ija.peek().type(), json_type::jinteger );
+  ija >> i;
+  BOOST_CHECK_EQUAL( i, 2 );
+  BOOST_CHECK( ija.expecting() );
+  ss << ",";
+  BOOST_CHECK( ija.expecting() );
+
+  ss << " 3 ";
+  BOOST_CHECK( !ija.expecting() );
+  ija >> i;
+  BOOST_CHECK_EQUAL( i, 3 );
+  BOOST_CHECK( ija.expecting() );
+
+  ss << " ]";
+  BOOST_CHECK( !ija.expecting() );
+  BOOST_CHECK( ija.at_end() );
+  BOOST_CHECK( !ija.fail() );
+}
 
 BOOST_AUTO_TEST_CASE( parser_test )
 {
