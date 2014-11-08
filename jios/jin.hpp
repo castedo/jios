@@ -52,6 +52,10 @@ public:
 
   bool hint_multiline() const;
 
+  bool operator ! () const { return this->fail(); }
+
+  explicit operator bool() const { return !(this->fail()); }
+ 
 protected:
   ijpair & dereference();
   ijpair & extract();
