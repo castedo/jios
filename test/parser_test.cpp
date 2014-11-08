@@ -6,7 +6,7 @@
 using namespace std;
 using namespace jios;
 
-BOOST_AUTO_TEST_CASE( incremental_array_parse)
+BOOST_AUTO_TEST_CASE( incremental_array_parse_test )
 {
   stringstream ss;
   ijstream jin = json_in(ss);
@@ -42,6 +42,24 @@ BOOST_AUTO_TEST_CASE( incremental_array_parse)
   BOOST_CHECK( !ija.expecting() );
   BOOST_CHECK( ija.at_end() );
   BOOST_CHECK( !ija.fail() );
+}
+
+BOOST_AUTO_TEST_CASE( incremental_array_parse_example )
+{
+  ostringstream cout;
+  stringstream ss;
+  int i = 0;
+  ss << "[";
+  ijarray ija = json_in(ss).get().array();
+  ss << "1 ";
+  ija >> i;
+  cout << i << endl;
+  ss << ", 2 ";
+  ija >> i;
+  cout << i << endl;
+  ss << "]";
+  if (ija.at_end()) { cout << "Done!" << endl; }
+  BOOST_CHECK_EQUAL( cout.str(), "1\n2\nDone!\n" );
 }
 
 BOOST_AUTO_TEST_CASE( parser_test )

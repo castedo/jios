@@ -80,6 +80,29 @@ outputs
   15
 ```
 
+### JSON arrays are parsed as a stream and accessible incrementally
+
+```cpp
+  stringstream ss;
+  int i = 0;
+  ss << "[";
+  ijarray ija = json_in(ss).get().array();
+  ss << "1 ";
+  ija >> i;
+  cout << i << endl;
+  ss << ", 2 ";
+  ija >> i;
+  cout << i << endl;
+  ss << "]";
+  if (ija.at_end()) { cout << "Done!" << endl; }
+```
+outputs
+```
+  1
+  2
+  Done!
+```
+
 ### Iterate by name value pair on JSON objects
 
 ```cpp
