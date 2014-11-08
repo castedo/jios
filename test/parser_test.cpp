@@ -62,6 +62,62 @@ BOOST_AUTO_TEST_CASE( incremental_array_parse_example )
   BOOST_CHECK_EQUAL( cout.str(), "1\n2\nDone!\n" );
 }
 
+struct async_adder
+{
+  ijarray ija;
+  int sum; 
+
+  void add_without_blocking()
+  {
+    while (!ija.expecting()) {
+      int i;
+      if (ija >> i) { sum += i; }
+    }
+  }
+};
+
+BOOST_AUTO_TEST_CASE( async_adder_test )
+{
+  stringstream ss;
+  ijstream jin = json_in(ss);
+  ss << "[";
+  async_adder adder{ jin.get().array(), 0 };
+
+  adder.add_without_blocking();
+  BOOST_CHECK_EQUAL( adder.sum, 0 );
+
+  ss << "1 ";
+  adder.add_without_blocking();
+  BOOST_CHECK_EQUAL( adder.sum, 1 );
+
+  ss << ", 2";
+  // NOTE: Another digit might follow the digit 2.
+  // So no integer should be parsed yet.
+  // (e.g. it might be twenty soomething)
+  adder.add_without_blocking();
+  BOOST_CHECK_EQUAL( adder.sum, 1 );
+
+  ss << " , ";
+  adder.add_without_blocking();
+  BOOST_CHECK_EQUAL( adder.sum, 3 );
+
+  ss << "3";
+  adder.add_without_blocking();
+  BOOST_CHECK_EQUAL( adder.sum, 3 );
+
+  ss << ", ";
+  adder.add_without_blocking();
+  BOOST_CHECK_EQUAL( adder.sum, 6 );
+
+  ss << "4, 5 ";
+  adder.add_without_blocking();
+  BOOST_CHECK_EQUAL( adder.sum, 15 );
+
+  ss << "]";
+  BOOST_CHECK( jin.at_end() );
+  BOOST_CHECK( !jin.fail() );
+}
+
 BOOST_AUTO_TEST_CASE( parser_test )
 {
   stringstream ss;

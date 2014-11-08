@@ -26,12 +26,17 @@ public:
     }
   }
 
-  void reset(json_object * p_node = NULL)
+  void reset_already_refcounted(json_object * p_new)
   {
     if (p_node_) {
       json_object_put(p_node_);
     }
-    p_node_ = json_object_get(p_node);
+    p_node_ = p_new;
+  }
+
+  void reset(json_object * p_new= NULL)
+  {
+    reset_already_refcounted(json_object_get(p_new));
   }
 
   void set_key(string const& key) { key_ = key; }
@@ -185,12 +190,10 @@ void jsonc_object_ijsource::do_advance()
 class jsonc_parser_facade
 {
   json_tokener * const p_toky_;
-  json_tokener_error tok_err_;
 
 public:
   jsonc_parser_facade()
     : p_toky_(json_tokener_new())
-    , tok_err_(json_tokener_success)
   {
     if (!p_toky_) {
       BOOST_THROW_EXCEPTION(bad_alloc());
@@ -206,7 +209,7 @@ public:
 
   //! Parsing means more calls to parse_some or induce_parse
   //! are expected to complete partial parsing.
-  bool parsing() { return tok_err_ == json_tokener_continue; }
+  bool parsing();
 
   //! Reinitialize parser to initial state for fresh new parsing.
   void clear();
@@ -221,20 +224,25 @@ public:
   json_object * induce_parse();
 };
 
+bool jsonc_parser_facade::parsing()
+{
+  return json_tokener_get_error(p_toky_) == json_tokener_continue;
+}
+
 void jsonc_parser_facade::clear()
 {
   json_tokener_reset(p_toky_);
-  tok_err_ = json_tokener_success;
 }
 
 json_object * jsonc_parser_facade::parse_some(const char * & it, streamsize n)
 {
   json_object * ret = json_tokener_parse_ex(p_toky_, it, n);
-  tok_err_ = json_tokener_get_error(p_toky_);
-  if (tok_err_ != json_tokener_continue && tok_err_ != json_tokener_success) {
+  json_tokener_error err = json_tokener_get_error(p_toky_);
+  if (err != json_tokener_continue && err != json_tokener_success) {
+    BOOST_ASSERT(!ret);
     json_tokener_reset(p_toky_);
   }
-  if (p_toky_->char_offset > 0) {
+  if (p_toky_->char_offset >= 0) {
     it += p_toky_->char_offset;
   } else {
     BOOST_ASSERT(!ret);
@@ -245,15 +253,15 @@ json_object * jsonc_parser_facade::parse_some(const char * & it, streamsize n)
 
 json_object * jsonc_parser_facade::induce_parse()
 {
-  BOOST_ASSERT(tok_err_ == json_tokener_continue);
+  BOOST_ASSERT(this->parsing());
   json_object * ret = nullptr;
-  if (tok_err_ == json_tokener_continue) {
+  if (this->parsing()) {
     ret = json_tokener_parse_ex(p_toky_, "", -1);
-    tok_err_ = json_tokener_get_error(p_toky_);
-    if (tok_err_ != json_tokener_success) {
+    json_tokener_error err = json_tokener_get_error(p_toky_);
+    if (err != json_tokener_success) {
       json_tokener_reset(p_toky_);
     }
-    BOOST_ASSERT( bool(ret) == (tok_err_ == json_tokener_success) );
+    BOOST_ASSERT( bool(ret) == (err == json_tokener_success) );
   }
   return ret;
 }
@@ -295,14 +303,17 @@ void jsonc_istream_parser::do_parse(shared_ptr<istream_facade> const& p_is)
   }
   while (is.avail() > 0 && value_.is_empty() && !is.fail()) {
     const char * it = is.begin();
-    value_.reset(jsonc_.parse_some(it, is.avail()));
-    is.remove_until(it);
-    if (!jsonc_.parsing() && value_.is_empty()) {
-      is.set_failbit();
+    value_.reset_already_refcounted(jsonc_.parse_some(it, is.avail()));
+    if (value_.is_empty()) {
+      BOOST_ASSERT( jsonc_.parsing() == (it != is.begin()) );
+      if (!jsonc_.parsing() || it == is.begin()) {
+        is.set_failbit();
+      }
     }
+    is.remove_until(it);
   }
   if (is.eof() && jsonc_.parsing()) {
-    value_.reset(jsonc_.induce_parse());
+    value_.reset_already_refcounted(jsonc_.induce_parse());
     if (value_.is_empty()) {
       is.set_failbit();
     }
