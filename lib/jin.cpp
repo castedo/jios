@@ -7,6 +7,23 @@ using namespace std;
 namespace jios {
 
 
+ostream & operator << (ostream & os, json_type src)
+{
+  const char * name = "";
+  #define CASE(s) case s: name = #s
+  switch (src) {
+    CASE(json_type::jnull);
+    CASE(json_type::jbool);
+    CASE(json_type::jinteger);
+    CASE(json_type::jfloat);
+    CASE(json_type::jstring);
+    CASE(json_type::jarray);
+    CASE(json_type::jobject);
+  }
+  #undef CASE
+  return os << name;
+}
+
 ijvalue & ijstream::get()
 {
   return this->extract();

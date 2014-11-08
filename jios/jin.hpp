@@ -177,6 +177,8 @@ enum class json_type {
     jarray,
     jobject};
 
+std::ostream & operator << (std::ostream & os, json_type src);
+
 class ijstate
   : boost::noncopyable
 {
