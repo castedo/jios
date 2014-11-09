@@ -308,8 +308,10 @@ private:
 
 void streaming_parser::do_clear()
 {
-  BOOST_ASSERT(p_src_ && p_src_->is_terminator());
-  //TODO: error check/set if parse partial
+  while (!p_src_->is_terminator() && !this->fail()) {
+    break; //TODO: should to something smarter than break for unfinished parse
+    p_src_->advance();
+  }
   p_parser_->clear();
   //TODO: re-use ijsource object instead of delete/free
   p_src_.reset();

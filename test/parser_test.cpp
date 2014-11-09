@@ -112,6 +112,7 @@ BOOST_AUTO_TEST_CASE( async_adder_test )
   ss << "4, 5 ";
   adder.add_without_blocking();
   BOOST_CHECK_EQUAL( adder.sum, 15 );
+  BOOST_CHECK( !jin.fail() );
 
   ss << "]";
   BOOST_CHECK( jin.at_end() );
