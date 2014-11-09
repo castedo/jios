@@ -118,6 +118,7 @@ private:
   bool do_is_terminator() override;
   void do_advance() override;
   bool do_expecting() override;
+  void do_init() override;
 };
 
 bool istream_stream_ijsource::do_is_terminator()
@@ -136,6 +137,11 @@ bool istream_stream_ijsource::do_expecting()
 {
   p_parser_->parse(p_is_);
   return !p_parser_->is_parsed() && p_is_->good();
+}
+
+void istream_stream_ijsource::do_init()
+{
+  p_parser_->clear();
 }
 
 shared_ptr<ijsource>
@@ -163,6 +169,7 @@ private:
   void do_advance() override;
   bool do_expecting() override;
   bool do_hint_multiline() const override { return multiline_; }
+  void do_init() override;
 
   bool parse_char();
 
@@ -260,6 +267,14 @@ bool istream_array_ijsource::do_expecting()
   return p_is_->good();
 }
 
+void istream_array_ijsource::do_init()
+{
+  BOOST_ASSERT( state_ == parse_state::finish );
+  p_parser_->clear();
+  state_ = parse_state::start;
+  multiline_ = false;
+}
+
 // streaming_parser
 
 class streaming_parser : public istream_parser, private ijpair
@@ -308,13 +323,8 @@ private:
 
 void streaming_parser::do_clear()
 {
-  while (!p_src_->is_terminator() && !this->fail()) {
-    break; //TODO: should to something smarter than break for unfinished parse
-    p_src_->advance();
-  }
+  p_src_->restart();
   p_parser_->clear();
-  //TODO: re-use ijsource object instead of delete/free
-  p_src_.reset();
 }
 
 ijarray streaming_parser::do_begin_array()

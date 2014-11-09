@@ -299,6 +299,7 @@ private:
   }
   bool do_hint_multiline() const override { debug(); return false; }
   void do_advance() override { debug(); }
+  void do_init() override { debug(); }
   bool do_expecting() override { debug(); return false; }
   bool do_is_terminator() override { return true; }
   string do_key() const override { debug(); return string(); }
@@ -346,8 +347,19 @@ bool ijsource::is_terminator()
 
 void ijsource::advance()
 {
-  BOOST_ASSERT(!this->is_terminator());
-  do_advance();
+  bool end = this->is_terminator();
+  BOOST_ASSERT(!end);
+  if (!end) {
+    do_advance();
+  }
+}
+
+void ijsource::restart()
+{
+  while (!this->is_terminator() && !this->fail()) {
+    do_advance();
+  }
+  do_init();
 }
 
 bool ijsource::expecting()

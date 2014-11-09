@@ -120,6 +120,12 @@ class jsonc_array_ijsource : public jsonc_parsed_ijsource
     init();
   }
 
+  void do_init() override
+  {
+    idx_ = 0;
+    init();
+  }
+
   void init()
   {
     BOOST_ASSERT(json_object_is_type(p_parent_, json_type_array));
@@ -170,6 +176,12 @@ private:
   }
 
   void do_advance() override;
+
+  void do_init() override
+  {
+    BOOST_ASSERT( p_member_ == nullptr );
+    p_member_ = nullptr;
+  }
 
   lh_entry * p_member_;
 };
@@ -231,6 +243,7 @@ bool jsonc_parser_facade::parsing()
 
 void jsonc_parser_facade::clear()
 {
+  BOOST_ASSERT( !parsing() );
   json_tokener_reset(p_toky_);
 }
 
