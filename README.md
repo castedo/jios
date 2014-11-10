@@ -8,8 +8,8 @@ Contents
 --------
 
 * [Features](#Features)
-* Parsing Examples(#Parsing Examples)
-* Printing Examples(#Printing Examples)
+* [Parsing Examples](#Parsing Examples)
+* [Printing Examples](#Printing Examples)
 * [Dependencies](#Dependencies)
 * [Other Libraries](#Other Libraries)
 
@@ -25,7 +25,8 @@ being called like a SAX parser would.
 
 ### Document Object Model (DOM) friendliness
 
-* JSON objects and arrays can be itererated in for loops like DOM
+JSON objects and arrays are represented by distinct C++ types
+and can be "walked" and iterated in for loops like a DOM interface.
 
 ### Non-blocking Parsing of Asynchronous Data Sources
 
