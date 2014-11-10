@@ -295,9 +295,6 @@ class ijsource
   virtual bool do_hint_multiline() const { return false; }
   virtual bool do_expecting() = 0;
 
-  //! Return to initial start state if no failure
-  virtual void do_init() = 0;
-
 public:
   virtual ~ijsource() {}
 
@@ -308,10 +305,6 @@ public:
   ijpair & dereference();
   bool is_terminator();
   void advance();
-
-  //! Advance until reaching terminator, if no failure.
-  //! Then enter initial start state as though nothing has been read.
-  void restart();
 
   bool hint_multiline() { return do_hint_multiline(); }
 

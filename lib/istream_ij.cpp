@@ -75,6 +75,10 @@ void istream_facade::remove_until(const char * it)
 
 class istream_ijsource : public ijsource
 {
+  //! Return to initial start state if no failure
+  //! If not at end, read/parse until end.
+  virtual void do_restart() = 0;
+
 public:
   istream_ijsource(shared_ptr<istream_facade> const& p_is,
                    shared_ptr<istream_parser> const& p_p)
@@ -85,6 +89,10 @@ public:
       BOOST_THROW_EXCEPTION(bad_alloc());
     }
   }
+
+  //! Advance until reaching terminator, if no failure.
+  //! Then enter initial start state as though nothing has been read.
+  void restart() { do_restart(); }
 
 protected:
   ijstate & do_state() override { return *p_is_; }
@@ -118,7 +126,7 @@ private:
   bool do_is_terminator() override;
   void do_advance() override;
   bool do_expecting() override;
-  void do_init() override;
+  void do_restart() override;
 };
 
 bool istream_stream_ijsource::do_is_terminator()
@@ -139,7 +147,7 @@ bool istream_stream_ijsource::do_expecting()
   return !p_parser_->is_parsed() && p_is_->good();
 }
 
-void istream_stream_ijsource::do_init()
+void istream_stream_ijsource::do_restart()
 {
   p_parser_->clear();
 }
@@ -169,7 +177,7 @@ private:
   void do_advance() override;
   bool do_expecting() override;
   bool do_hint_multiline() const override { return multiline_; }
-  void do_init() override;
+  void do_restart() override;
 
   bool parse_char();
 
@@ -267,9 +275,13 @@ bool istream_array_ijsource::do_expecting()
   return p_is_->good();
 }
 
-void istream_array_ijsource::do_init()
+void istream_array_ijsource::do_restart()
 {
-  BOOST_ASSERT( state_ == parse_state::finish );
+  if (state_ != parse_state::start) {
+    while (!this->is_terminator() && !this->fail()) {
+      this->advance();
+    }
+  }
   p_parser_->clear();
   state_ = parse_state::start;
   multiline_ = false;
@@ -318,7 +330,7 @@ private:
 
   shared_ptr<istream_facade> p_is_;
   shared_ptr<istream_parser> p_parser_;
-  shared_ptr<ijsource> p_src_;
+  shared_ptr<istream_ijsource> p_src_;
 };
 
 void streaming_parser::do_clear()
@@ -329,9 +341,12 @@ void streaming_parser::do_clear()
 
 ijarray streaming_parser::do_begin_array()
 {
-  BOOST_ASSERT(!p_src_);
-  p_src_.reset(new istream_array_ijsource(p_is_, p_parser_));
-  return p_src_;
+  if (p_src_) {
+    p_src_->restart();
+  } else {
+    p_src_.reset(new istream_array_ijsource(p_is_, p_parser_));
+  }
+  return ijarray(p_src_);
 }
 
 shared_ptr<istream_parser>

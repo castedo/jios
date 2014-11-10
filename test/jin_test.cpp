@@ -232,3 +232,159 @@ BOOST_AUTO_TEST_CASE( dont_skip_ws_test )
   BOOST_CHECK( !ss.eof() );
 }
 
+BOOST_AUTO_TEST_CASE( incremental_array_parse_test )
+{
+  stringstream ss;
+  ijstream jin = json_in(ss);
+  int i = 0;
+
+  BOOST_CHECK( jin.expecting() );
+  ss << "1 ";
+  BOOST_CHECK( !jin.expecting() );
+  jin >> i;
+  BOOST_CHECK_EQUAL( i, 1 );
+
+  ss << "[";
+  BOOST_CHECK( !jin.expecting() );
+  ijarray ija = jin.get().array();
+  BOOST_CHECK( ija.expecting() );
+  
+  ss << " 2 ";
+  BOOST_CHECK( !ija.expecting() );
+  BOOST_CHECK_EQUAL( ija.peek().type(), json_type::jinteger );
+  ija >> i;
+  BOOST_CHECK_EQUAL( i, 2 );
+  BOOST_CHECK( ija.expecting() );
+  ss << ",";
+  BOOST_CHECK( ija.expecting() );
+
+  ss << " 3 ";
+  BOOST_CHECK( !ija.expecting() );
+  ija >> i;
+  BOOST_CHECK_EQUAL( i, 3 );
+  BOOST_CHECK( ija.expecting() );
+
+  ss << " ]";
+  BOOST_CHECK( !ija.expecting() );
+  BOOST_CHECK( ija.at_end() );
+  BOOST_CHECK( !ija.fail() );
+}
+
+BOOST_AUTO_TEST_CASE( incremental_array_parse_example )
+{
+  ostringstream cout;
+  stringstream ss;
+  int i = 0;
+  ss << "[";
+  ijarray ija = json_in(ss).get().array();
+  ss << "1 ";
+  ija >> i;
+  cout << i << endl;
+  ss << ", 2 ";
+  ija >> i;
+  cout << i << endl;
+  ss << "]";
+  if (ija.at_end()) { cout << "Done!" << endl; }
+  BOOST_CHECK_EQUAL( cout.str(), "1\n2\nDone!\n" );
+}
+
+struct async_adder
+{
+  ijarray ija;
+  int sum; 
+
+  void add_without_blocking()
+  {
+    while (!ija.expecting()) {
+      int i;
+      if (ija >> i) { sum += i; }
+    }
+  }
+};
+
+BOOST_AUTO_TEST_CASE( async_adder_test )
+{
+  stringstream ss;
+  ijstream jin = json_in(ss);
+  ss << "[";
+  async_adder adder{ jin.get().array(), 0 };
+
+  adder.add_without_blocking();
+  BOOST_CHECK_EQUAL( adder.sum, 0 );
+
+  ss << "1 ";
+  adder.add_without_blocking();
+  BOOST_CHECK_EQUAL( adder.sum, 1 );
+
+  ss << ", 2";
+  // NOTE: Another digit might follow the digit 2.
+  // So no integer should be parsed yet.
+  // (e.g. it might be twenty soomething)
+  adder.add_without_blocking();
+  BOOST_CHECK_EQUAL( adder.sum, 1 );
+
+  ss << " , ";
+  adder.add_without_blocking();
+  BOOST_CHECK_EQUAL( adder.sum, 3 );
+
+  ss << "3";
+  adder.add_without_blocking();
+  BOOST_CHECK_EQUAL( adder.sum, 3 );
+
+  ss << ", ";
+  adder.add_without_blocking();
+  BOOST_CHECK_EQUAL( adder.sum, 6 );
+
+  ss << "4, 5 ";
+  adder.add_without_blocking();
+  BOOST_CHECK_EQUAL( adder.sum, 15 );
+  BOOST_CHECK( !jin.fail() );
+
+  ss << "]";
+  BOOST_CHECK( jin.at_end() );
+  BOOST_CHECK( !jin.fail() );
+}
+
+BOOST_AUTO_TEST_CASE( nested_array_test )
+{
+  stringstream ss;
+  ijstream jin = json_in(ss);
+  int i, j;
+
+  ss << "[";
+  BOOST_CHECK( !jin.expecting() );
+  ijarray ija = jin.get().array();
+  BOOST_CHECK( ija.expecting() );
+  
+  ss << " [ ";
+  BOOST_CHECK( !ija.expecting() );
+  BOOST_CHECK_EQUAL( ija.peek().type(), json_type::jarray );
+
+  ss << " 1 ";
+  ijarray ija2 = ija.get().array();
+  ija2 >> i;
+  BOOST_CHECK_EQUAL( i, 1 );
+  BOOST_CHECK( ija2.expecting() );
+  ss << "]";
+  BOOST_CHECK( ija2.at_end() );
+  BOOST_CHECK( !ija.fail() );
+  BOOST_CHECK( ija.expecting() );
+
+  ss << ", [ 2, 3] ";
+  BOOST_CHECK( !ija.expecting() );
+  ija2 = ija.get().array();
+  BOOST_CHECK( !ija2.at_end() );
+  BOOST_CHECK( !ija2.fail() );
+  ija2 >> i >> j;
+  BOOST_CHECK_EQUAL( i, 2 );
+  BOOST_CHECK_EQUAL( j, 3 );
+  BOOST_CHECK( !ija2.fail() );
+  BOOST_CHECK( !ija2.expecting() );
+  BOOST_CHECK( ija2.at_end() );
+
+  ss << " ]";
+  BOOST_CHECK( !ija.expecting() );
+  BOOST_CHECK( ija.at_end() );
+  BOOST_CHECK( !ija.fail() );
+}
+
