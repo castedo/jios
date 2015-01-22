@@ -8,6 +8,7 @@
 #include <deque>
 #include <forward_list>
 #include <array>
+#include <map>
 #include <tuple>
 #include <boost/noncopyable.hpp>
 #include <boost/iterator/iterator_adaptor.hpp>
@@ -138,6 +139,9 @@ public:
 
   template<typename KeyT, typename ValT>
   ijobject & operator >> (std::tuple<KeyT &, ValT &> const& dest);
+
+  template<typename KeyT, typename ValT>
+  ijobject & operator >> (std::pair<KeyT, ValT> & dest);
 
   typedef basic_iterator<ijpair &> iterator;
 
@@ -346,6 +350,18 @@ ijobject & ijobject::operator >> (std::tuple<KeyT &, ValT &> const& dest)
   return *this;
 }
 
+template<typename KeyT, typename ValT>
+ijobject & ijobject::operator >> (std::pair<KeyT, ValT> & dest)
+{
+  ijpair & kval = this->get();
+  if (kval.parse_key(dest.first)) {
+    kval.read(dest.second);
+  } else {
+    set_failbit();
+  }
+  return *this;
+}
+
 inline bool ijstreamoid::hint_multiline() const
 { 
   return pimpl_->hint_multiline();
@@ -412,6 +428,18 @@ void jios_read(ijvalue & ij, std::forward_list<T> & container)
 {
   container.clear();
   jios::jios_read(ij, std::back_inserter(container));
+}
+
+template<class KeyT, class ValT>
+void jios_read(ijvalue & ij, std::map<KeyT, ValT> & container)
+{
+  container.clear();
+  ijobject ijo = ij.object();
+  while (!ijo.at_end()) {
+    std::pair<KeyT, ValT> keyvalue;
+    ijo >> keyvalue;
+    container.insert(keyvalue);
+  }
 }
 
 

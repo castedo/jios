@@ -11,6 +11,7 @@
 #include <deque>
 #include <forward_list>
 #include <array>
+#include <map>
 #include <boost/noncopyable.hpp>
 #include <boost/optional.hpp>
 #include <boost/range/iterator_range.hpp>
@@ -393,6 +394,17 @@ template<class T>
 void jios_write(ojvalue & oj, std::forward_list<T> const& cont)
 {
   jios::jios_write(oj, boost::make_iterator_range(cont));
+}
+
+template<class KeyT, class ValT>
+void jios_write(ojvalue & oj, std::map<KeyT, ValT> const& container)
+{
+  auto range = boost::make_iterator_range(container);
+  ojobject ojo = oj.object(true);
+  for (auto it = range.begin(); it != range.end(); ++it) {
+    ojo << *it;
+  }
+  ojo.terminate();
 }
 
 
