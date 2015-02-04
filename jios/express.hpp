@@ -1,6 +1,7 @@
 #ifndef JIOS_EXPRESS_HPP
 #define JIOS_EXPRESS_HPP
 
+#include "express.hh"
 #include "jin.hpp"
 #include "jout.hpp"
 
@@ -156,20 +157,19 @@ private:
   bool key_found_;
 };
 
+// jobject_expressor implementation
 
-template<class Derived>
-struct jobject_expressible
+template<class T>
+void jobject_expressor<T>::write(ojvalue & oj, T const& src)
 {
-  friend void jios_write(ojvalue & oj, Derived const& src)
-  {
-    jobject_writer<Derived>::write(oj, src);
-  }
+  jobject_writer<T>::write(oj, src);
+}
 
-  friend void jios_read(ijvalue & ij, Derived & dest)
-  {
-    jobject_reader<Derived>::read(ij, dest);
-  }
-};
+template<class T>
+void jobject_expressor<T>::read(ijvalue & ij, T & dest)
+{
+  jobject_reader<T>::read(ij, dest);
+}
 
 //! JSON tuble (array) expressing classes
 
