@@ -125,7 +125,7 @@ struct jobject_reader
   void merge(ijvalue & ij, T & dest)
   {
     jobject_reader<T> reader(ij.object(), dest);
-    while (!reader.ijo_.at_end() && !reader.ijo_.fail()) {
+    while (!reader.ijo_.fail() && !reader.ijo_.at_end()) {
       Expresser::jios_express(reader);
       if (!reader.key_found_) {
         reader.ijo_.set_failbit();
@@ -212,7 +212,7 @@ public:
   {
     dest = T();
     jtuple_reader reader(ij.array(), dest);
-    while (!reader.at_end() && !reader.fail()) {
+    while (!reader.fail() && !reader.at_end()) {
       Expresser::jios_express(reader);
     }
   }
