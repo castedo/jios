@@ -8,7 +8,7 @@ class ojvalue;
 class ijvalue;
 
 template<class T>
-struct jobject_expressor
+struct jobject_expresser
 {
   static void write(ojvalue & oj, T const& src);
   static void read(ijvalue & ij, T & dest);
@@ -19,12 +19,12 @@ struct jobject_expressible
 {
   friend void jios_write(ojvalue & oj, Derived const& src)
   {
-    jobject_expressor<Derived>::write(oj, src);
+    jobject_expresser<Derived>::write(oj, src);
   }
 
   friend void jios_read(ijvalue & ij, Derived & dest)
   {
-    jobject_expressor<Derived>::read(ij, dest);
+    jobject_expresser<Derived>::read(ij, dest);
   }
 };
 

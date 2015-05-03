@@ -117,14 +117,14 @@ struct jobject_reader
   static
   void read(ijvalue & ij, T & dest)
   {
-    jobject_clearer<T>::clear(dest);
+    jobject_clearer<Expresser>::clear(dest);
     merge(ij, dest);
   }
 
   static
   void merge(ijvalue & ij, T & dest)
   {
-    jobject_reader<T> reader(ij.object(), dest);
+    jobject_reader reader(ij.object(), dest);
     while (!reader.ijo_.fail() && !reader.ijo_.at_end()) {
       Expresser::jios_express(reader);
       if (!reader.key_found_) {
@@ -157,16 +157,16 @@ private:
   bool key_found_;
 };
 
-// jobject_expressor implementation
+// jobject_expresser implementation
 
 template<class T>
-void jobject_expressor<T>::write(ojvalue & oj, T const& src)
+void jobject_expresser<T>::write(ojvalue & oj, T const& src)
 {
   jobject_writer<T>::write(oj, src);
 }
 
 template<class T>
-void jobject_expressor<T>::read(ijvalue & ij, T & dest)
+void jobject_expresser<T>::read(ijvalue & ij, T & dest)
 {
   jobject_reader<T>::read(ij, dest);
 }
