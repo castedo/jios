@@ -10,36 +10,32 @@
 namespace jios {
 
 
-template<class T>
-struct jobject_expression_prototype
-{
-  //! For compile-time type inspection and testing
-  template<typename MemberT>
-  jobject_expression_prototype & member(std::string const&, MemberT T::*mptr)
-  {
-    T * p_dest = nullptr;
-    MemberT & data = p_dest->*mptr;
-    boost::ignore_unused_variable_warning(data);
-    return *this;
-  }
-};
-
 ////////////////////////////////////////////////////////////////////
 // jios_express detection
 
 namespace detail {
-    template<typename T, typename ReturnType = decltype(
-        T::jios_express(std::declval<jobject_expression_prototype<T>&>())
-    )>
-    struct jobject_jios_express
-    {
-        typedef found_tag tag;
-        static_assert( std::is_void<ReturnType>::value,
-                       "jios_express return type should be void" );
-    };
+
+  template<class Base, class Derived>
+  using EnabledIfIsBaseOf = typename
+     std::enable_if<std::is_base_of<Base, Derived>::value>::type;
+
+  struct fake_expression {};
+
+  template<class T>
+  using JiosExpressReturnType =
+     decltype(T::jios_express(std::declval<fake_expression&>()));
+
+  template<typename T, typename ReturnType = JiosExpressReturnType<T>>
+  struct jobject_jios_express
+  {
+      typedef match_tag tag;
+      static_assert( std::is_void<ReturnType>::value,
+                     "jios_express return type should be void" );
+  };
+
 }
 
-template<typename T, typename Omitted = detail::found_tag>
+template<typename T, typename Omitted = detail::match_tag>
 struct is_jobject_expressible
   : std::false_type
 {};
@@ -68,10 +64,12 @@ struct jobject_clearer<T, typename is_jobject_expressible<T>::type>
     T::jios_express(clearer);
   }
 
-  template<typename MemberT>
-  jobject_clearer & member(std::string const& key, MemberT T::*mptr)
+  template<class MemberT, class BaseT,
+           class = detail::EnabledIfIsBaseOf<BaseT, T>>
+  jobject_clearer & member(std::string const& key, MemberT BaseT::*mptr)
   {
-    MemberT & data = dest_.*mptr;
+    BaseT & base = dest_;
+    MemberT & data = base.*mptr;
     jobject_clearer<MemberT>::clear(data);
     return *this;
   }
@@ -93,10 +91,12 @@ struct jobject_writer
     writer.ojo_ << endj;
   }
 
-  template<typename MemberT>
-  jobject_writer & member(std::string const& key, MemberT T::*mptr)
+  template<class MemberT, class BaseT,
+           class = detail::EnabledIfIsBaseOf<BaseT, T>>
+  jobject_writer & member(std::string const& key, MemberT BaseT::*mptr)
   {
-    MemberT const& data = src_.*mptr;
+    BaseT const& base = src_;
+    MemberT const& data = base.*mptr;
     ojo_ << std::tie(key, data);
     return *this;
   }
@@ -135,10 +135,12 @@ struct jobject_reader
     }
   }
 
-  template<typename MemberT>
-  jobject_reader & member(std::string const& key, MemberT T::*mptr)
+  template<class MemberT, class BaseT,
+           class = detail::EnabledIfIsBaseOf<BaseT, T>>
+  jobject_reader & member(std::string const& key, MemberT BaseT::*mptr)
   {
-    MemberT & data = dest_.*mptr;
+    BaseT & base = dest_;
+    MemberT & data = base.*mptr;
     if (!key_found_ && ijo_.key() == key) {
       key_found_ = true;
       ijo_.get().read(data);

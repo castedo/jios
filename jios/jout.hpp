@@ -103,20 +103,20 @@ public:
 void jios_write(ojvalue & oj, std::nullptr_t);
 
 namespace detail {
-    struct found_tag {};
+    struct match_tag {};
 
     template<typename T, typename ReturnType = decltype(
         jios_write(std::declval<ojvalue&>(), std::declval<T>())
     )>
     struct find_jios_write
     {
-        typedef found_tag tag;
+        typedef match_tag tag;
         static_assert( std::is_void<ReturnType>::value,
                        "jios_write return type should be void" );
     };
 }
 
-template<typename T, typename Omitted = detail::found_tag>
+template<typename T, typename Omitted = detail::match_tag>
 struct jios_write_exists
   : std::false_type
 {};

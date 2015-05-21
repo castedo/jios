@@ -158,13 +158,13 @@ namespace detail {
     )>
     struct find_jios_read
     {
-        typedef found_tag tag;
+        typedef match_tag tag;
         static_assert( std::is_void<ReturnType>::value,
                        "jios_read return type should be void" );
     };
 }
 
-template<typename T, typename Omitted = detail::found_tag>
+template<typename T, typename Omitted = detail::match_tag>
 struct jios_read_exists
   : std::false_type
 {};
