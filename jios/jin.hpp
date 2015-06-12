@@ -11,6 +11,7 @@
 #include <map>
 #include <tuple>
 #include <boost/noncopyable.hpp>
+#include <boost/optional.hpp>
 #include <boost/iterator/iterator_adaptor.hpp>
 #include "jout.hpp"
 
@@ -227,6 +228,15 @@ public:
     return good_string_value_read();
   }
 
+  template<typename T>
+  boost::optional<T> read()
+  {
+    boost::optional<T> ret;
+    jios_read(*this, ret);
+    if (fail()) { ret = boost::none; }
+    return ret;
+  }
+
   ijarray array();
   ijobject object();
 
@@ -382,6 +392,17 @@ bool ijpair::parse_key(T & dest) const
 
 /////////////////////////////////////////////////////////////////
 /// more jios_read definitions for fundamental types
+
+template<typename T>
+void jios_read(ijvalue & ij, boost::optional<T> & ov)
+{
+  if (ij.type() == json_type::jnull) {
+    ov = boost::none;
+  } else {
+    ov.emplace();
+    jios_read(ij, *ov);
+  }
+}
 
 template<class Container>
 void jios_read(ijvalue & ij, std::back_insert_iterator<Container> it)

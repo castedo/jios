@@ -16,8 +16,6 @@
 #include <boost/optional.hpp>
 #include <boost/range/iterator_range.hpp>
 
-#define DEPRECATED __attribute__((deprecated))
-
 namespace jios {
 
 
