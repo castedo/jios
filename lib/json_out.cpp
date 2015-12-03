@@ -95,6 +95,7 @@ protected:
   virtual void do_flush();
   void do_close();
   virtual void do_terminate();
+  virtual bool do_is_terminator() const;
 
 private:
   void init(bool object);
@@ -275,6 +276,11 @@ void ostream_ojnode::do_terminate()
     os_->setstate(std::ios_base::failbit);
   }
   if (parent_) { parent_->do_close(); }
+}
+
+bool ostream_ojnode::do_is_terminator() const
+{
+  return (TERMINATED == state_);
 }
 
 void ostream_ojnode::init(bool in_object)

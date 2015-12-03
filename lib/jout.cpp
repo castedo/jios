@@ -15,6 +15,11 @@ void endj(ojobject & oj)
   oj.terminate();
 }
 
+bool ojstreamoid::at_end() const
+{
+  return !pimpl_ || pimpl_->do_is_terminator();
+}
+
 void ojvalue::write_string_value()
 {
   istreambuf_iterator<char> it(buf_);

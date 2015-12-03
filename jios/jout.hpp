@@ -28,7 +28,7 @@ class ojstreamoid
   : boost::noncopyable
 {
 public:
-  ojstreamoid();
+  ojstreamoid() {}
 
   ojstreamoid(std::shared_ptr<ojsink> const& p) : pimpl_(p) {}
 
@@ -38,6 +38,8 @@ public:
 
   void terminate();
 
+  bool at_end() const;
+
 protected:
   std::shared_ptr<ojsink> pimpl_;
 };
@@ -46,7 +48,7 @@ class ojstream
   : public ojstreamoid
 {
 public:
-  ojstream();
+  ojstream() {}
 
   ojstream(std::shared_ptr<ojsink> const& p) : ojstreamoid(p) {}
 
@@ -63,6 +65,8 @@ class ojarray
   : public ojstream
 {
 public:
+  ojarray() {}
+
   ojarray(std::shared_ptr<ojsink> const& p) : ojstream(p) {}
 
   ojvalue & operator * ();
@@ -76,6 +80,8 @@ class ojobject
   : public ojstreamoid
 {
 public:
+  ojobject() {}
+
   ojobject(std::shared_ptr<ojsink> const& p) : ojstreamoid(p) {}
 
   template<typename T>
@@ -200,6 +206,7 @@ class ojsink
   void set_key_with_string_value();
 
   virtual void do_terminate() = 0;
+  virtual bool do_is_terminator() const = 0;
   virtual void do_set_key(string_iterator, string_iterator) = 0;
 };
 
