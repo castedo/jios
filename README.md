@@ -87,7 +87,8 @@ Parsing Examples
   using namespace boost::posix_time;
   istringstream ss("[\"00:01:03\", \"00:00:12\"]");
   time_duration t1, t2;
-  json_in(ss).get().array() >> t1 >> t2;
+  ijarray ija = json_in(ss).get().array();
+  ija >> t1 >> t2;
   cout << boolalpha << bool(t1 == seconds(63)) << ' '
                     << bool(t2 == seconds(12)) << endl;
 ```
@@ -177,8 +178,8 @@ outputs
   ss << R"( { "Joe":35, "Jane":33 } )";
   string name1, name2;
   int age1, age2;
-  json_in(ss).get().object() >> tie(name1, age1)
-                             >> tie(name2, age2);
+  ijobject ijo = json_in(ss).get().object();
+  ijo >> tie(name1, age1) >> tie(name2, age2);
   cout << name1 << " is " << age1 - age2 << " years older than "
        << name2 << endl;
 ```

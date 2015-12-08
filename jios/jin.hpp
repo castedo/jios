@@ -99,9 +99,10 @@ public:
 
   ijstream(std::shared_ptr<ijsource> const& pimpl) : ijstreamoid(pimpl) {}
 
-  ijvalue & get();
+  ijvalue & get() &;
+  ijvalue && get() &&;
 
-  ijvalue const& peek();
+  ijvalue const& peek() &;
 
   template<typename T> ijstream & operator >> (T & dest);
 
@@ -132,9 +133,10 @@ public:
 
   ijobject(std::shared_ptr<ijsource> const& pimpl) : ijstreamoid(pimpl) {}
 
-  ijpair & get();
+  ijpair & get() &;
+  ijpair && get() &&;
 
-  ijpair const& peek();
+  ijpair const& peek() &;
 
   std::string key();
 

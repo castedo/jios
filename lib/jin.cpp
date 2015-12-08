@@ -24,12 +24,17 @@ ostream & operator << (ostream & os, json_type src)
   return os << name;
 }
 
-ijvalue & ijstream::get()
+ijvalue & ijstream::get() &
 {
   return this->extract();
 }
 
-ijvalue const& ijstream::peek()
+ijvalue && ijstream::get() &&
+{
+  return std::move(this->extract());
+}
+
+ijvalue const& ijstream::peek() &
 {
   return this->dereference();
 }
@@ -77,12 +82,17 @@ ijpair & ijstreamoid::extract()
   return ret;
 }
 
-ijpair & ijobject::get()
+ijpair & ijobject::get() &
 {
   return this->extract();
 }
 
-ijpair const& ijobject::peek()
+ijpair && ijobject::get() &&
+{
+  return std::move(this->extract());
+}
+
+ijpair const& ijobject::peek() &
 {
   return this->dereference();
 }
