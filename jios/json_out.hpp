@@ -17,6 +17,17 @@ ojstream lined_json_out(std::ostream & os);
 ojstream lined_json_out(std::shared_ptr<std::ostream> const&,
                         char delim = EOF);
 
+template<class T>
+struct enable_stream_out
+{
+  friend
+  std::ostream & operator << (std::ostream & os, T const& src)
+  {
+    jios_write(json_out(os).put(), src);
+    return os;
+  }
+};
+
 
 } // namespace
 

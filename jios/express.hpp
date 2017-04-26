@@ -173,7 +173,7 @@ void jobject_expresser<T>::read(ijvalue & ij, T & dest)
   jobject_reader<T>::read(ij, dest);
 }
 
-//! JSON tuble (array) expressing classes
+//! JSON tuple (array) expressing classes
 
 template<class T, class Expresser = T>
 class jtuple_writer
